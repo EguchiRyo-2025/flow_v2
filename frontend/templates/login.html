@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}ログイン{% endblock %}
+{% block header %}
+ログイン
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+{% endblock %}
+{% block content %}
+<div class="login-container">
+    
+    {# 修正: Flashメッセージ表示ブロックを削除。base.html の #message-area が自動的に表示するため不要 #}
+    {# {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul id="flash-messages">
+          {% for category, message in messages %}
+            <li class="flash {{ category }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %} #}
+    
+    <form method="POST" class="login-form">
+        <div class="input-group">
+            <label for="username">ユーザーID</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div class="input-group">
+            <label for="password">パスワード</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <div class="input-group">
+            <button type="submit" class="button">ログイン</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

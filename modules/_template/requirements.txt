@@ -1,0 +1,6 @@
+# Template Module Dependencies
+# このモジュール固有の依存関係をここに記述
+
+# 例:
+# numpy==1.24.4
+# opencv-python==4.7.0.72

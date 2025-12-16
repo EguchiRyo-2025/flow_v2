@@ -1,0 +1,72 @@
+{% extends "base_2col.html" %}
+
+{% block title %}図形マッピング - Digital Workbench{% endblock %}
+
+{% block header %}描画・音{% endblock %}
+
+{% block head_2col_extra %}
+<link rel="stylesheet" href="/modules/mapping/static/css/styles.css">
+<link rel="stylesheet" href="/modules/mapping/static/css/register_figure.css">
+{% endblock %}
+
+{% block content_left %}
+<div class="table-container">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>コメント</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>0</td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="table-action-buttons">
+        <div class="table-edit-buttons">
+            <button class="btn-table-action" id="new-row">新規</button>
+            <button class="btn-table-action" id="add-row">登録</button>
+            <button class="btn-table-action btn-danger" id="delete-row">削除</button>
+        </div>
+        <div class="bulk-move-section">
+            <div class="bulk-move-controls">
+                <div class="bulk-move-row">
+                    <span>X:</span>
+                    <button class="btn-bulk-small" id="bulk-x-minus">−</button>
+                    <input type="number" id="bulk-x-value" value="0" step="10">
+                    <button class="btn-bulk-small" id="bulk-x-plus">＋</button>
+                </div>
+                <div class="bulk-move-row">
+                    <span>Y:</span>
+                    <button class="btn-bulk-small" id="bulk-y-minus">−</button>
+                    <input type="number" id="bulk-y-value" value="0" step="10">
+                    <button class="btn-bulk-small" id="bulk-y-plus">＋</button>
+                </div>
+                <button class="btn-bulk-apply" id="bulk-apply-move">一括移動適用</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content_right %}
+<div class="tabs">
+    <button class="tab-button active" data-tab="visual">図形・画像</button>
+    <button class="tab-button" data-tab="sound">音</button>
+</div>
+<div class="tab-content">
+    <!-- コンポーネントがここに動的に読み込まれます -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/modules/mapping/static/js/group_manager.js"></script>
+<script src="/modules/mapping/static/js/element_manager.js"></script>
+<script src="/modules/mapping/static/js/display_window_manager.js"></script>
+<script src="/modules/mapping/static/js/main.js"></script>
+<script src="/modules/mapping/static/js/window_manager.js"></script>
+<script src="/modules/mapping/static/js/register_figure.js"></script>
+{% endblock %}

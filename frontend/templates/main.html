@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}メイン画面{% endblock %}
+
+{% block header %}メイン画面{% endblock %}
+
+{% block menu %}
+<nav>
+  <ul class="main-nav">
+
+    <li class="dropdown">
+      <a href="javascript:void(0);" class="menu-button">パッケージ▼</a>
+      <ul class="dropdown-menu">
+        <li><a href="javascript:void(0);" onclick="openSettingWindow('simple_iot', '{{ url_for('simple_iot.simple_iot') }}')">Simple IoT</a></li>
+        <li><a href="javascript:void(0);" onclick="openSettingWindow('m5stick_iot', '{{ url_for('m5stick_iot.m5stick_iot') }}')">M5Stick IoT</a></li>
+        <li><a href="javascript:void(0);" onclick="openSettingWindow('camera_reader_iot', '{{ url_for('camera_reader_iot_bp.view') }}')">Camera Reader IoT</a></li>
+      </ul>
+    </li>
+
+    <li class="dropdown">
+      <a href="javascript:void(0);" class="menu-button">設定画面▼</a>
+      <ul class="dropdown-menu">
+        <li><a href="javascript:void(0);" onclick="openSettingWindow('gpio', '{{ url_for('settings_gpio.settings_gpio') }}')">GPIO設定</a></li>
+        <li><a href="javascript:void(0);" onclick="openSettingWindow('camera', '{{ url_for('settings_camera_bp.show_camera_settings') }}')">カメラ設定</a></li>
+        <li><a href="javascript:void(0);" onclick="openSettingWindow('db', '{{ url_for('settings_db_bp.settings_db') }}')">DB設定</a></li>
+        <li><a href="javascript:void(0);" onclick="openSettingWindow('read', '{{ url_for('settings_read_bp.settings_read') }}')">読取設定</a></li>
+        <li><a href="javascript:void(0);" onclick="openSettingWindow('time', '{{ url_for('settings_time_bp.set_time_route') }}')">時刻設定</a></li>
+        <li><a href="javascript:void(0);" onclick="openSettingWindow('csv_path', '{{ url_for('settings_csv_path_bp.settings_csv_path_') }}')">CSV保存先設定</a></li>
+        <li><a href="javascript:void(0);" onclick="openSettingWindow('row_count', '{{ url_for('settings_row_count_bp.settings_row_count') }}')">行数設定</a></li>
+        <li><a href="javascript:void(0);" onclick="openSettingWindow('m5stick', '{{ url_for('settings_m5stick_bp.settings_m5stick') }}')">M5Stick通信設定</a></li>
+        <li><a href="javascript:void(0);" onclick="openSettingWindow('plc', '{{ url_for('settings_plc_bp.settings_plc') }}')">PLC通信設定</a></li>
+        <li><a href="javascript:void(0);" onclick="openSettingWindow('ftp', '{{ url_for('settings_ftp_bp.settings_ftp') }}')">FTPファイル転送設定</a></li>
+      </ul>
+    </li>
+
+    <li class="right">
+        {% if config['DISPLAY_LOGIN_SCREEN'] == 1 %}
+            <a href="javascript:void(0);" class="menu-button disabled-logout-button">ログアウト</a>
+        {% else %}
+            <a href="/logout">ログアウト</a>
+        {% endif %}
+    </li>
+  </ul>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/window_manager.js') }}"></script>
+{% endblock %}

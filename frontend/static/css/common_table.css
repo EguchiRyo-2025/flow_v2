@@ -1,0 +1,73 @@
+/* app/static/css/common/common_table.css */
+
+/* 全てのstyled-tableに共通して適用される基本スタイル */
+.styled-table {
+    width: 100%;
+    /* ▼▼▼【修正】「隙間」を作るための正しい基本スタイルに戻す ▼▼▼ */
+    border-collapse: separate;
+    border-spacing: 2px;
+    background-color: #dcdcdc; /* 隙間の色として機能 */
+    /* ▲▲▲【修正】ここまで ▲▲▲ */
+    table-layout: fixed;
+    margin-bottom: 20px;
+}
+
+/* テーブルヘッダー共通スタイル */
+.styled-table thead th {
+    background-color: #E0F7FA;
+    color: #333;
+    font-size: 14px;
+    padding: 4px;
+    text-align: center;
+    font-weight: bold;
+    border: none; /* 個別のボーダーは不要 */
+}
+
+/* テーブルボディのセル共通スタイル */
+.styled-table tbody td {
+    background-color: white;
+    padding: 0px 4px;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 12px;
+    border: none; /* 個別のボーダーは不要 */
+    word-wrap: break-word;
+}
+
+/* 入力フィールド共通スタイル */
+.styled-table td input[type="text"],
+.styled-table td input[type="number"],
+.styled-table td input[type="password"],
+.styled-table td select {
+    height: 20px;
+    padding: 0 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 10px;
+    box-sizing: border-box;
+    vertical-align: middle;
+    text-align: center;
+    width: calc(100% - 8px);
+    margin: 0;
+}
+
+.styled-table td select {
+    background-color: white;
+}
+
+input.invalid-input,
+select.invalid-input {
+    background-color: #ffc0cb !important;
+    border-color: #dc3545 !important;
+}
+
+.styled-table td input:disabled,
+.styled-table td select:disabled {
+    background-color: #e0e0e0 !important;
+    color: #555 !important;
+    cursor: not-allowed;
+}
+
+.highlight-duplicate {
+    background-color: #ffe4e1 !important;
+}

@@ -1,0 +1,211 @@
+<div class="visual-component">
+    <h3>図形・画像設定</h3>
+    <div class="component-layout">
+        <!-- 左側：要素一覧テーブル -->
+        <div class="visual-list-section">
+            <h4>要素一覧</h4>
+            
+            <!-- ON/OFFタブ -->
+            <div class="visual-state-tabs">
+                <button class="visual-tab active" data-state="on">ON時の要素</button>
+                <button class="visual-tab" data-state="off">OFF時の要素</button>
+            </div>
+            
+            <!-- ON時の要素テーブル -->
+            <div class="visual-table-container" id="on-visual-container">
+                <table class="visual-table">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>種類</th>
+                            <th>内容</th>
+                            <th>コメント</th>
+                        </tr>
+                    </thead>
+                    <tbody id="visual-list-on">
+                        <!-- ON時の要素が追加されます -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- OFF時の要素テーブル -->
+            <div class="visual-table-container hidden" id="off-visual-container">
+                <table class="visual-table">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>種類</th>
+                            <th>内容</th>
+                            <th>コメント</th>
+                        </tr>
+                    </thead>
+                    <tbody id="visual-list-off">
+                        <!-- OFF時の要素が追加されます -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 右側：設定パネル -->
+        <div class="visual-settings-section">
+            <div class="component-content">
+                <div class="form-group">
+                    <label for="dest">表示先:</label>
+                    <select id="dest" class="form-control">
+                        <option value="monitor">モニター</option>
+                        <option value="parts">部品棚</option>
+                        <option value="workbench">作業台</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="comment">コメント:</label>
+                    <input type="text" id="comment" class="form-control">
+                </div>
+
+                <!-- 点滅制御 -->
+                <div class="blink-control">
+                    <h4>点滅制御</h4>
+                    <div class="blink-toggle">
+                        <label class="switch">
+                            <input type="checkbox" id="blink-enabled">
+                            <span class="slider"></span>
+                        </label>
+                        <span class="toggle-label">ON/OFF</span>
+                    </div>
+                    <div class="blink-timing">
+                        <div class="timing-group">
+                            <label for="blink-on-time">ON時間:</label>
+                            <input type="number" id="blink-on-time" class="timing-input" value="0.5" step="0.1" min="0.1">s
+                        </div>
+                        <div class="timing-group">
+                            <label for="blink-off-time">OFF時間:</label>
+                            <input type="number" id="blink-off-time" class="timing-input" value="0.5" step="0.1" min="0.1">s
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 要素タイプ選択 -->
+                <div class="element-type-selector">
+                    <label class="type-label">要素タイプ:</label>
+                    <div class="type-buttons">
+                        <button class="type-btn active" data-type="figure">
+                            <span class="icon">🔷</span>図形
+                        </button>
+                        <button class="type-btn" data-type="image">
+                            <span class="icon">🖼️</span>画像
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 図形設定（デフォルト表示） -->
+                <div id="figure-settings" class="type-settings">
+                    <div class="form-group">
+                        <label for="figure-type">図形タイプ:</label>
+                        <select id="figure-type" class="form-control">
+                            <option value="polygon">多角形</option>
+                            <option value="rectangle">矩形</option>
+                            <option value="circle">円</option>
+                            <option value="triangle">三角形</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group flex-grow">
+                            <label for="figure-color">色:</label>
+                            <input type="color" id="figure-color" class="form-control" value="#007BFF">
+                        </div>
+                        <button class="btn btn-cursor-apply" id="cursor-move">カーソル移動</button>
+                    </div>
+                </div>
+
+                <!-- 画像設定 -->
+                <div id="image-settings" class="type-settings hidden">
+                    <!-- 通常の画像ファイル選択（点滅制御なし） -->
+                    <div class="form-group" id="single-image-group">
+                        <label for="image-file">画像ファイル:</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="image-file" class="form-control" accept="image/*" style="display: none;">
+                            <button class="btn btn-file-select" onclick="document.getElementById('image-file').click()">
+                                ファイルを選択
+                            </button>
+                            <span id="image-file-name" class="file-name-display">未選択</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 点滅制御用の画像ファイル選択（ON/OFF別々） -->
+                    <div id="blink-image-group" style="display: none;">
+                        <div class="form-group">
+                            <label for="image-file-on">ON時の画像:</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="image-file-on" class="form-control" accept="image/*" style="display: none;">
+                                <button class="btn btn-file-select" onclick="document.getElementById('image-file-on').click()">
+                                    ファイルを選択
+                                </button>
+                                <span id="image-file-on-name" class="file-name-display">未選択</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="image-file-off">OFF時の画像:</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="image-file-off" class="form-control" accept="image/*" style="display: none;">
+                                <button class="btn btn-file-select" onclick="document.getElementById('image-file-off').click()">
+                                    ファイルを選択
+                                </button>
+                                <span id="image-file-off-name" class="file-name-display">未選択</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 選択中の画像表示 -->
+                    <div class="image-display" id="image-display">
+                        <img id="image-display-img" src="" alt="選択中の画像" draggable="false">
+                        <div class="image-info">
+                            <span id="image-dimensions"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- 座標設定 -->
+                    <div class="coordinate-controls">
+                        <h4>位置</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="image-x">X座標:</label>
+                                <input type="number" id="image-x" class="form-control" value="0" step="10">
+                            </div>
+                            <div class="form-group">
+                                <label for="image-y">Y座標:</label>
+                                <input type="number" id="image-y" class="form-control" value="0" step="10">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 拡大縮小設定 -->
+                    <div class="scale-controls">
+                        <h4>拡大縮小</h4>
+                        <div class="form-group">
+                            <label for="image-scale">倍率: <span id="scale-value">1.0</span>x</label>
+                            <input type="range" id="image-scale" class="scale-slider" min="0.1" max="5.0" step="0.1" value="1.0">
+                        </div>
+                    </div>
+                    
+                    <!-- 回転設定 -->
+                    <div class="rotation-controls">
+                        <h4>回転</h4>
+                        <div class="form-group">
+                            <label for="image-rotation">角度: <span id="rotation-value">0</span>°</label>
+                            <input type="range" id="image-rotation" class="rotation-slider" min="0" max="360" step="15" value="0">
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-cursor-apply" id="cursor-move-image">カーソル移動</button>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" id="add-visual">追加</button>
+                    <button class="btn btn-secondary" id="delete-visual">削除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

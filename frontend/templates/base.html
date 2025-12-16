@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Digital Workbench{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/common_table.css') }}">
+    {# 各ページ固有の追加のhead要素（例：追加のCSS）をここに入れる #}
+    {% block head_extra %}{% endblock %} 
+</head>
+<body>
+
+<header class="global-header">
+    <div class="header-left">LAS-MES</div>
+    <h1 class="page-title">{% block header %}{% endblock %}</h1>
+    <div class="header-right">IoT - Tool Package</div>
+</header>
+    
+    <nav>
+        <ul class="main-nav">
+            <li class="dropdown-menu">
+                <a href="#" class="dropdown-toggle">描画・音 ▼</a>
+                <ul class="dropdown-submenu">
+                    <li><a href="/mapping/register">描画・音設定</a></li>
+                </ul>
+            </li>
+            <li class="dropdown-menu">
+                <a href="#" class="dropdown-toggle">3D画像 ▼</a>
+                <ul class="dropdown-submenu">
+                    <li><a href="/detection/origin">原点設定</a></li>
+                    <li><a href="/detection/detect">3D検知</a></li>
+                </ul>
+            </li>
+            <li class="dropdown-menu">
+                <a href="#" class="dropdown-toggle">フロー ▼</a>
+                <ul class="dropdown-submenu">
+                    <li><a href="/flow/designer">フロー設計</a></li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+    <div id="message-area">
+                {% for category, message in messages %}
+                    <div class="message-area message-{{ category }}"> 
+                        {{ message }}
+                    </div>
+                {% endfor %}
+    </div>
+        {% endif %}
+    {% endwith %}
+
+    <main id="scrollable-area">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
+    {# ここに各ページ固有のJavaScriptが挿入されます #}
+    {% block scripts %}{% endblock %} 
+</body>
+</html>

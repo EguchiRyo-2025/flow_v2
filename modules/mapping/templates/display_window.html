@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ display_target }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #000;
+            overflow: hidden;
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            user-select: none;
+        }
+        
+        /* 大きな識別ラベル */
+        .display-label {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 120px;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+            z-index: 1;
+            text-transform: uppercase;
+            letter-spacing: 20px;
+            font-family: 'Arial Black', sans-serif;
+        }
+        
+        .display-label.parts {
+            color: rgba(0, 150, 255, 0.15);
+        }
+        
+        .display-label.workbench {
+            color: rgba(255, 150, 0, 0.15);
+        }
+        
+        .display-label.monitor {
+            color: rgba(150, 255, 0, 0.15);
+        }
+        
+        #display-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+        
+        .display-image {
+            position: absolute;
+            transition: none;
+            cursor: move;
+            user-select: none;
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            pointer-events: auto;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }
+        
+        .display-image:hover {
+            outline: 2px solid #00FF00;
+            z-index: 1000;
+        }
+        
+        .display-image.dragging {
+            opacity: 0.8;
+            z-index: 9999;
+        }
+        
+        .display-image.selected {
+            outline: 3px solid #FFD700;
+            z-index: 999;
+        }
+        
+        /* リサイズハンドル（四隅+四辺中央の8つ） */
+        .resize-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #FFD700;
+            border: 2px solid #000;
+            border-radius: 2px;
+            display: none;
+            z-index: 10001;
+            pointer-events: auto;
+        }
+        
+        .resize-handle.nw { cursor: nw-resize; }
+        .resize-handle.n { cursor: n-resize; }
+        .resize-handle.ne { cursor: ne-resize; }
+        .resize-handle.e { cursor: e-resize; }
+        .resize-handle.se { cursor: se-resize; }
+        .resize-handle.s { cursor: s-resize; }
+        .resize-handle.sw { cursor: sw-resize; }
+        .resize-handle.w { cursor: w-resize; }
+        
+        .display-image.selected ~ .resize-handle {
+            display: block;
+        }
+        
+        /* 情報パネル（デバッグ用） */
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            color: #00FF00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            z-index: 100000;
+            min-width: 300px;
+            border: 2px solid #00FF00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        
+        .info-panel h3 {
+            margin-bottom: 15px;
+            color: #FFD700;
+            font-size: 20px;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #FFD700;
+        }
+        
+        .info-panel .monitor-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            background: #FFD700;
+            color: #000;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .info-panel .monitor-badge.parts {
+            background: #0096FF;
+        }
+        
+        .info-panel .monitor-badge.workbench {
+            background: #FF9600;
+        }
+        
+        .info-panel .info-item {
+            margin: 8px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+        }
+        
+        .info-panel .info-label {
+            color: #888;
+            display: inline-block;
+            width: 120px;
+            font-weight: bold;
+        }
+        
+        .info-panel .info-value {
+            color: #0F0;
+            font-weight: bold;
+        }
+        
+        .info-panel button {
+            margin-top: 10px;
+            padding: 8px 15px;
+            cursor: pointer;
+            width: 100%;
+            background: #333;
+            color: #0F0;
+            border: 1px solid #0F0;
+            border-radius: 3px;
+            font-family: inherit;
+        }
+        
+        .info-panel button:hover {
+            background: #0F0;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="display-label {{ display_target }}">{{ display_target }}</div>
+    <div id="display-canvas"></div>
+    
+    <div class="info-panel" id="info-panel">
+        <h3>
+            <span class="monitor-badge {{ display_target }}">{{ display_target|upper }}</span>
+        </h3>
+        <div class="info-item">
+            <span class="info-label">モニター:</span>
+            <span class="info-value" id="monitor-name">{{ display_target }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">表示中要素:</span>
+            <span class="info-value" id="element-count">0</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">グループID:</span>
+            <span class="info-value" id="current-group">未選択</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">選択中:</span>
+            <span class="info-value" id="selected-element">なし</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">ウィンドウサイズ:</span>
+            <span class="info-value" id="window-size">-</span>
+        </div>
+        <button id="toggle-info-btn">情報パネルを隠す</button>
+    </div>
+
+    <script>
+        window.DISPLAY_TARGET = "{{ display_target }}";
+        
+        // ウィンドウサイズを表示
+        function updateWindowSize() {
+            const sizeEl = document.getElementById('window-size');
+            if (sizeEl) {
+                sizeEl.textContent = `${window.innerWidth} × ${window.innerHeight} px`;
+            }
+        }
+        updateWindowSize();
+        window.addEventListener('resize', updateWindowSize);
+        
+        // URLパラメータからウィンドウ位置・サイズを設定
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const x = urlParams.get('x');
+            const y = urlParams.get('y');
+            const w = urlParams.get('w');
+            const h = urlParams.get('h');
+            
+            if (x !== null && y !== null && w !== null && h !== null) {
+                // ウィンドウを指定位置・サイズに移動・リサイズ
+                console.log(`Positioning window: (${x}, ${y}) ${w}x${h}`);
+                window.moveTo(parseInt(x), parseInt(y));
+                window.resizeTo(parseInt(w), parseInt(h));
+                
+                // 念のため少し遅延してからもう一度実行
+                setTimeout(() => {
+                    window.moveTo(parseInt(x), parseInt(y));
+                    window.resizeTo(parseInt(w), parseInt(h));
+                }, 100);
+            }
+            
+            const displayTarget = "{{ display_target }}";
+            
+            // display_targetに応じてウィンドウを配置
+            if (displayTarget === 'parts' || displayTarget === 'workbench') {
+                // 少し遅延してから自動的に全画面化を試行
+                setTimeout(() => {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(err => {
+                            console.log('Auto-fullscreen blocked by browser. Click window to go fullscreen.');
+                        });
+                    }
+                }, 500);
+                
+                // ウィンドウのタイトルを設定
+                document.title = `Display: ${displayTarget.toUpperCase()}`;
+            }
+        })();
+    </script>
+    <script src="/modules/mapping/static/js/display_window.js"></script>
+</body>
+</html>

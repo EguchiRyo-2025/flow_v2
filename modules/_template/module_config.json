@@ -1,0 +1,32 @@
+{
+  "name": "template_module",
+  "display_name": "テンプレートモジュール",
+  "version": "1.0.0",
+  "author": "開発者名",
+  "description": "新しいモジュールのテンプレート",
+  "capabilities": [
+    "example_action"
+  ],
+  "flow_nodes": [
+    {
+      "type": "example_action",
+      "display_name": "サンプルアクション",
+      "icon": "icon.svg",
+      "properties": {
+        "param1": {
+          "type": "string",
+          "display_name": "パラメータ1",
+          "default": ""
+        },
+        "param2": {
+          "type": "number",
+          "display_name": "パラメータ2",
+          "default": 0
+        }
+      }
+    }
+  ],
+  "api_endpoints": [
+    "/api/template/action"
+  ]
+}

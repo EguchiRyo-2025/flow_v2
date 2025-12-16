@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>フロー設定</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="top-menu">
+            <button id="settingsBtn">設定</button>
+            <button id="flowBtn">フロー</button>
+        </div>
+        <div id="blocklyDiv"></div>
+    </div>
+
+    <div id="toolbox" style="display: none">
+        <category name="カスタム" colour="160">
+            <block type="custom_my_function">
+                <value name="PARAM1">
+                    <shadow type="text">
+                        <field name="TEXT">テスト</field>
+                    </shadow>
+                </value>
+                <value name="PARAM2">
+                    <shadow type="math_number">
+                        <field name="NUM">123</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="custom_api_call">
+                <value name="URL">
+                    <shadow type="text">
+                        <field name="TEXT">https://api.example.com</field>
+                    </shadow>
+                </value>
+                <value name="DATA">
+                    <shadow type="text">
+                        <field name="TEXT">{}</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="custom_console_log">
+                <value name="MESSAGE">
+                    <shadow type="text">
+                        <field name="TEXT">Hello!</field>
+                    </shadow>
+                </value>
+            </block>
+        </category>
+        <category name="論理" colour="210">
+            <block type="controls_if"></block>
+            <block type="logic_compare"></block>
+            <block type="logic_operation"></block>
+            <block type="logic_negate"></block>
+            <block type="logic_boolean"></block>
+        </category>
+        <category name="ループ" colour="120">
+            <block type="controls_repeat_ext">
+                <value name="TIMES">
+                    <shadow type="math_number">
+                        <field name="NUM">10</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="controls_whileUntil"></block>
+            <block type="controls_for">
+                <value name="FROM">
+                    <shadow type="math_number">
+                        <field name="NUM">1</field>
+                    </shadow>
+                </value>
+                <value name="TO">
+                    <shadow type="math_number">
+                        <field name="NUM">10</field>
+                    </shadow>
+                </value>
+            </block>
+        </category>
+        <category name="数学" colour="230">
+            <block type="math_number">
+                <field name="NUM">123</field>
+            </block>
+            <block type="math_arithmetic">
+                <value name="A">
+                    <shadow type="math_number">
+                        <field name="NUM">1</field>
+                    </shadow>
+                </value>
+                <value name="B">
+                    <shadow type="math_number">
+                        <field name="NUM">1</field>
+                    </shadow>
+                </value>
+            </block>
+        </category>
+        <category name="テキスト" colour="160">
+            <block type="text"></block>
+            <block type="text_print">
+                <value name="TEXT">
+                    <shadow type="text">
+                        <field name="TEXT">abc</field>
+                    </shadow>
+                </value>
+            </block>
+        </category>
+        <category name="変数" colour="330" custom="VARIABLE"></category>
+        <category name="関数" colour="290" custom="PROCEDURE"></category>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/blockly/build/blockly_compressed.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/blockly/build/blocks_compressed.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/blockly/build/javascript_compressed.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/blockly/build/msg/ja.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/blockly_init.js') }}" type="module"></script>
+    <script src="{{ url_for('static', filename='js/custom_blocks.js') }}" type="module"></script>
+</body>
+</html>
