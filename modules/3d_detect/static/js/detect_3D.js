@@ -5,6 +5,48 @@ if (!window.pixelCountInterval) {
     window.pixelCountInterval = null;
 }
 
+// カメラクリーンアップ関数（確実に実行）
+function cleanupCamera() {
+    console.log('検知画面: カメラクリーンアップ開始');
+    
+    // カメラストリームを停止（RGB/Depth両対応）
+    const cameraStream = document.getElementById('cameraStream');
+    if (cameraStream) {
+        cameraStream.src = '';
+        console.log('検知画面: カメラストリーム（RGB/Depth）を停止しました');
+    }
+    
+    // インターバルを停止
+    if (window.pixelCountInterval) {
+        clearInterval(window.pixelCountInterval);
+        window.pixelCountInterval = null;
+        console.log('検知画面: インターバルを停止しました');
+    }
+    
+    // サーバーにクリーンアップを通知（keepalive: trueで確実に送信）
+    try {
+        fetch('/detection/cleanup', {
+            method: 'POST',
+            keepalive: true
+        });
+        console.log('検知画面: クリーンアップ通知を送信しました');
+    } catch (err) {
+        console.warn('カメラクリーンアップ通知エラー:', err);
+    }
+}
+
+// ページ離脱時のクリーンアップ
+window.addEventListener('beforeunload', cleanupCamera);
+window.addEventListener('pagehide', cleanupCamera);
+
+window.addEventListener('pagehide', () => {
+    // pagehideイベントでもクリーンアップ
+    if (window.pixelCountInterval) {
+        clearInterval(window.pixelCountInterval);
+        window.pixelCountInterval = null;
+    }
+});
+
 // 左右反転した映像の座標を実際のカメラ座標に変換
 function convertFlippedCoordinate(x, imageWidth = 640) {
     return imageWidth - 1 - x;
@@ -555,7 +597,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // リアルタイムピクセルカウントを開始する関数
     function startPixelCounting(originData) {
-        if (!originData || !originData.points || !originData.depth) return;
+        if (!originData || !originData.points || !originData.depth) {
+            console.error('startPixelCounting: 無効な原点データ', originData);
+            return;
+        }
 
         // 既存のインターバルを停止（重複実行防止）
         if (window.pixelCountInterval) {
@@ -563,14 +608,23 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('既存のリアルタイム監視を停止');
         }
 
+        console.log(`リアルタイム監視開始: 原点${originData.No}`);
+        console.log('監視対象データ:', {
+            points: originData.points,
+            depth_min: originData.depth.depth_min,
+            depth_max: originData.depth.depth_max
+        });
+
         // 500msごとに更新
         window.pixelCountInterval = setInterval(() => {
+            console.log(`[${new Date().toLocaleTimeString()}] updatePixelCounts呼び出し`);
             updatePixelCounts(originData);
         }, 500);
 
-        console.log(`リアルタイム監視開始: 原点${originData.No}`);
+        console.log('setIntervalが設定されました。ID:', window.pixelCountInterval);
         
         // 初回実行
+        console.log('初回updatePixelCounts実行');
         updatePixelCounts(originData);
     }
 

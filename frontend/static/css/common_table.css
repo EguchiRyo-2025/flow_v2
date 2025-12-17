@@ -20,7 +20,25 @@
     padding: 4px;
     text-align: center;
     font-weight: bold;
-    border: none; /* 個別のボーダーは不要 */
+    border: 1px solid #b0bec5; /* 罫線追加 */
+}
+
+/* テーブル行のスタイル */
+.styled-table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+/* テーブル行のホバー状態 */
+.styled-table tbody tr:hover {
+    background-color: #f0f8ff;
+}
+
+/* テーブル行の選択状態 */
+.styled-table tbody tr.selected {
+    background-color: #e3f2fd;
+    outline: 2px solid #0056b3;
+    outline-offset: -2px;
 }
 
 /* テーブルボディのセル共通スタイル */
@@ -30,8 +48,13 @@
     text-align: center;
     vertical-align: middle;
     font-size: 12px;
-    border: none; /* 個別のボーダーは不要 */
+    border: 1px solid #dcdcdc; /* 罫線追加 */
     word-wrap: break-word;
+}
+
+/* 選択された行のセル */
+.styled-table tbody tr.selected td {
+    border-color: #0056b3;
 }
 
 /* 入力フィールド共通スタイル */

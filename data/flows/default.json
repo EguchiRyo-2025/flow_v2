@@ -3,7 +3,7 @@
   "description": "",
   "steps": [
     {
-      "id": "76!~g1]M3s)1.7(6Nid%",
+      "id": "t]BBYI3xKoHS$G7qbbsL",
       "type": "action",
       "module": "mapping",
       "action": "show_group",
@@ -13,7 +13,7 @@
       "description": "プロジェクション開始"
     },
     {
-      "id": "P?unJ$wSYo#DFuiP314*",
+      "id": "Uj^b]*DIR03NWU*MbRlG",
       "type": "action",
       "module": "3d_detect",
       "action": "detect_touch",
@@ -26,7 +26,7 @@
       "description": "3D検知"
     },
     {
-      "id": "EXbwj|21enQZ1byV+b{p",
+      "id": "zP*wpJ$hZ5EB*`r;K=K+",
       "type": "action",
       "module": "mapping",
       "action": "hide_group",

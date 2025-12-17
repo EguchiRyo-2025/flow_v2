@@ -21,14 +21,33 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   console.log('原点設定画面: DOM読み込み完了');
   
-  // ページ遷移時のクリーンアップ（detect画面から遷移してきた際の残骸対策）
+  // ページ遷移時のクリーンアップ（どのページから来てもカメラリソースを確実に解放）
   function cleanupOnPageLeave() {
-    console.log('原点設定画面: ページ離脱時のクリーンアップ');
-    // detect画面で開始したインターバルをクリア
+    console.log('原点設定画面: ページ離脱時のクリーンアップ開始');
+    
+    // カメラストリームを停止（RGB/Depth両対応）
+    const cameraStream = document.getElementById('cameraStream');
+    if (cameraStream) {
+      cameraStream.src = '';
+      console.log('原点設定画面: カメラストリーム（RGB/Depth）を停止しました');
+    }
+    
+    // インターバルをクリア
     if (window.pixelCountInterval) {
       clearInterval(window.pixelCountInterval);
       window.pixelCountInterval = null;
-      console.log('原点設定画面: detect画面のインターバルを停止しました');
+      console.log('原点設定画面: インターバルを停止しました');
+    }
+    
+    // サーバーにクリーンアップを通知（keepalive: trueで確実に送信）
+    try {
+      fetch('/detection/cleanup', {
+        method: 'POST',
+        keepalive: true
+      });
+      console.log('原点設定画面: クリーンアップ通知を送信しました');
+    } catch (err) {
+      console.warn('カメラクリーンアップ通知エラー:', err);
     }
   }
   
@@ -345,7 +364,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function switchStream(newSrc) {
+    // 既存のストリームを停止してから新しいストリームに切り替え
+    const existingStream = document.getElementById('cameraStream');
+    if (existingStream) {
+      existingStream.src = '';
+    }
     cameraContainer.innerHTML = `<img id="cameraStream" src="${newSrc}">`;
+    console.log('原点設定画面: カメラストリームを切り替えました:', newSrc);
   }
 
   if (colorBtn) {
@@ -359,6 +384,10 @@ document.addEventListener('DOMContentLoaded', () => {
       switchStream('/detection/stream/depth');
     });
   }
+  
+  // ページ読み込み時にデフォルトでRGBストリームを開始
+  console.log('原点設定画面: カメラストリームを初期化します');
+  switchStream('/detection/stream/rgb');
 
   if (originBtn) {
     originBtn.addEventListener('click', () => {

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, Response, request, jsonify
+from flask import Blueprint, render_template, Response, request, jsonify, g
 from pathlib import Path
 from .camera.depth_image import (
     generate_depth,
@@ -9,6 +9,7 @@ from .camera.RGB_image import generate_rgb
 from .camera.camera_manager import camera_manager
 import json
 import atexit
+import threading
 
 MODULE_DIR = Path(__file__).parent
 DEBUG_DIR = MODULE_DIR / 'debug'
@@ -21,10 +22,25 @@ detection_bp = Blueprint('detection_bp', __name__,
                          template_folder='templates',
                          static_folder='static')
 
+# アクティブなストリームを追跡
+active_streams = {'rgb': 0, 'depth': 0}
+stream_lock = threading.Lock()
+
 # アプリケーション終了時にカメラリソースをクリーンアップ
 @atexit.register
 def cleanup():
     camera_manager.cleanup()
+
+@detection_bp.before_request
+def before_request():
+    """リクエスト前処理 - カメラリソース初期化"""
+    g.camera_active = True
+
+# teardown_requestは無効化 - ページ遷移時のJavaScript側のクリーンアップで対応
+# @detection_bp.teardown_request
+# def teardown_request(exception=None):
+#     """リクエスト後処理 - 不要なリソース解放"""
+#     pass
 
 # 実際のURL: /detection/origin
 @detection_bp.route('/origin')
@@ -38,11 +54,51 @@ def detect_3d():
 
 @detection_bp.route('/stream/rgb')
 def stream_rgb():
-    return Response(generate_rgb(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    with stream_lock:
+        active_streams['rgb'] += 1
+    try:
+        return Response(generate_rgb(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    finally:
+        with stream_lock:
+            active_streams['rgb'] -= 1
+            if active_streams['rgb'] == 0:
+                camera_manager._need_rgb = False
 
 @detection_bp.route('/stream/depth')
 def stream_depth():
-    return Response(generate_depth(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    with stream_lock:
+        active_streams['depth'] += 1
+    try:
+        return Response(generate_depth(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    finally:
+        with stream_lock:
+            active_streams['depth'] -= 1
+            if active_streams['depth'] == 0:
+                camera_manager._need_depth = False
+
+@detection_bp.route('/cleanup', methods=['POST'])
+def cleanup_camera():
+    """カメラリソースを明示的にクリーンアップ"""
+    import time
+    try:
+        print("カメラクリーンアップリクエスト受信")
+        
+        with stream_lock:
+            active_streams['rgb'] = 0
+            active_streams['depth'] = 0
+        
+        # カメラのニーズフラグをリセット
+        camera_manager._need_rgb = False
+        camera_manager._need_depth = False
+        
+        # 少し待機してストリームが完全に停止するのを待つ
+        time.sleep(0.3)
+        
+        print("カメラクリーンアップ完了")
+        return jsonify({'success': True, 'message': 'Camera resources cleaned up'})
+    except Exception as e:
+        print(f"カメラクリーンアップエラー: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @detection_bp.route('/register_origin', methods=['POST'])

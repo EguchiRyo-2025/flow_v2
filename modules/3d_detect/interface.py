@@ -385,8 +385,10 @@ class Detection3DModule(ModuleInterface):
         try:
             self.logger.info("Cleaning up 3D Detection module...")
             
-            if self.camera_manager:
-                self.camera_manager.cleanup()
+            # camera_managerはシングルトンで他のページ（検知画面など）でも使用されるため
+            # ここではクリーンアップしない。アプリケーション終了時にapp.pyのatexitで処理される
+            # if self.camera_manager:
+            #     self.camera_manager.cleanup()
             
             self._initialized = False
             return True

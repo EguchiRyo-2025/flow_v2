@@ -193,22 +193,30 @@ body {
 }
 
 .data-table tbody tr {
-  border-bottom: 1px solid #e0e0e0;
-  transition: background-color 0.2s;
+  border: 1px solid #e0e0e0;
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
   cursor: pointer;
 }
 
 .data-table tbody tr:hover {
   background-color: #f0f8ff;
+  border-color: #b0c4de;
 }
 
 .data-table tbody tr.selected {
   background-color: #e3f2fd;
+  border: 2px solid #0056b3;
+  box-shadow: 0 0 8px rgba(0, 86, 179, 0.4);
 }
 
 .data-table td {
   padding: 12px;
   font-size: 14px;
+  border-right: 1px solid #e0e0e0;
+}
+
+.data-table td:last-child {
+  border-right: none;
 }
 
 .editable-cell {
@@ -712,20 +720,23 @@ input[type="file"].form-control {
 
 .figure-table td {
   padding: 8px 6px;
-  border-bottom: 1px solid #e9ecef;
+  border: 1px solid #e9ecef;
 }
 
 .figure-table tbody tr {
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
 .figure-table tbody tr:hover {
   background-color: #f8f9fa;
+  border-color: #b0c4de;
 }
 
 .figure-table tbody tr.selected {
   background-color: #cfe2ff;
+  border: 2px solid #0056b3;
+  box-shadow: 0 0 8px rgba(0, 86, 179, 0.4);
 }
 
 .figure-settings-section {
@@ -1163,20 +1174,23 @@ input:checked + .slider:before {
 
 .visual-table td {
   padding: 8px 6px;
-  border-bottom: 1px solid #e9ecef;
+  border: 1px solid #e9ecef;
 }
 
 .visual-table tbody tr {
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
 .visual-table tbody tr:hover {
   background-color: #f8f9fa;
+  border-color: #b0c4de;
 }
 
 .visual-table tbody tr.selected {
   background-color: #cfe2ff;
+  border: 2px solid #0056b3;
+  box-shadow: 0 0 8px rgba(0, 86, 179, 0.4);
 }
 
 .visual-settings-section {

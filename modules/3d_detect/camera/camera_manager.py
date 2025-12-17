@@ -122,9 +122,22 @@ class CameraManager:
 
     def _handle_capture_failure(self, capture_error: Exception):
         now = time.time()
+        error_str = str(capture_error)
+        
+        # OUT_OF_FLOWエラーは一時的な競合状態なので、デバイスリセット不要
+        if 'OUT_OF_FLOW' in error_str or 'open by other components' in error_str:
+            if now - self._last_capture_error_logged_at > 5.0:
+                print(f"カメラ一時的競合（継続中）: {capture_error}")
+                self._last_capture_error_logged_at = now
+            # デバイスリセットせずに継続
+            return
+        
+        # その他の深刻なエラーの場合のみログとリセット
         if now - self._last_capture_error_logged_at > 1.0:
             print(f"カメラキャプチャエラー: {capture_error}")
             self._last_capture_error_logged_at = now
+        
+        # 深刻なエラーの場合のみリセット
         self._reset_device()
 
     def _ensure_capture_thread(self):
@@ -171,6 +184,7 @@ class CameraManager:
                                 fps=30
                             ))
                             self._depth_stream.start()
+                            print("深度ストリームを開始しました")
                     if need_rgb:
                         if self._rgb_stream is None:
                             self._rgb_stream = self._device.create_color_stream()
@@ -181,10 +195,12 @@ class CameraManager:
                                 fps=30
                             ))
                             self._rgb_stream.start()
+                            print("RGBストリームを開始しました")
 
                     depth_stream = self._depth_stream if need_depth else None
                     rgb_stream = self._rgb_stream if need_rgb else None
 
+                # ストリームのロックを解放してからフレームを読む
                 if depth_stream:
                     depth_frame = depth_stream.read_frame()
                     if depth_frame is not None:
