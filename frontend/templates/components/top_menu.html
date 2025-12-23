@@ -1,0 +1,17 @@
+<div class="top-menu">
+    <button onclick="window.location.href='/'">設定</button>
+    <div class="dropdown">
+        <button class="dropdown-btn" id="mainMenuBtn">メニュー ▼</button>
+        <div class="dropdown-content">
+            <a href="#" data-menu="mapping">描画・音</a>
+            <a href="#" data-menu="3d">3D画像</a>
+            <a href="#" data-menu="flow">フロー</a>
+        </div>
+    </div>
+    <div class="dropdown" id="subMenu" style="display: none;">
+        <button class="dropdown-btn" id="subMenuBtn">機能選択 ▼</button>
+        <div class="dropdown-content" id="subMenuContent">
+            <!-- JavaScriptで動的に変更 -->
+        </div>
+    </div>
+</div>

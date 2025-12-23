@@ -1,0 +1,58 @@
+/* ==============================================
+   ▼ 3カラムレイアウト専用スタイル
+   ============================================== */
+
+/* レイアウト全体のコンテナ */
+.three-column-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 10px; /* フレーム間の隙間 */
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+/* フレームの共通スタイル */
+.content-frame {
+  border-radius: 4px; /* 角を少し丸める */
+  padding: 15px; /* フレームの内側の余白 */
+  background-color: #ffffff;
+  box-sizing: border-box;
+  overflow-y: auto; /* 中身が溢れたらスクロール */
+  overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 各カラムの幅を個別に指定 */
+.column-left {
+  flex: 0 0 50%; /* 伸びない、縮まない、基本幅50% */
+}
+
+.column-middle {
+  flex: 0 0 0; /* 中央の隙間は不要 */
+  display: none;
+}
+
+.column-right {
+  flex: 1 1 0; /* 残りのスペースを使用 */
+}
+
+
+/* 黒い画面（カメラ・ログ）のアスペクト比と最小高さを制御 */
+.camera-frame-wrapper,
+.log-viewer-container {
+    width: 100%;
+    aspect-ratio: 16 / 9; /* 歪みを防ぐためアスペクト比を再設定 */
+}
+
+/* ==============================================
+   ▼ 2カラムレイアウト専用スタイル
+   ============================================== */
+
+/* 2カラムレイアウト全体のコンテナ */
+/* .column-left は3カラムと共通のため定義不要 */
+/* .column-right は3カラムと共通のため定義不要 */
+
+

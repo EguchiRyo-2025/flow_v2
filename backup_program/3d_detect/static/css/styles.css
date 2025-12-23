@@ -1,0 +1,575 @@
+/* 全体のリセットと基本設定 */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f0f0f0;
+}
+
+/* メニューバーとボタンの背景を青に */
+.top-menu, .table-buttons button, .image-buttons button, .origin-button button {
+  background-color: #007BFF; /* 青色 */
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.top-menu button:hover,
+.table-buttons button:hover,
+.image-buttons button:hover,
+.origin-button button:hover {
+  background-color: #0056b3; /* 濃い青にホバー時 */
+}
+
+/* メニューバー */
+.top-menu {
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.top-menu > button {
+  background-color: #007BFF;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.top-menu > button:hover {
+  background-color: #0056b3;
+}
+
+/* ドロップダウンメニュー */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-btn {
+  background-color: #007BFF;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.dropdown-btn:hover {
+  background-color: #0056b3;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #f9f9f9;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dropdown-content a {
+  color: black;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+  transition: background-color 0.3s;
+}
+
+.dropdown-content a:hover {
+  background-color: #f1f1f1;
+}
+
+.dropdown:hover .dropdown-content,
+.dropdown.active .dropdown-content {
+  display: block;
+}
+
+/* ドロップダウンのクリック機能用 */
+.dropdown-content.show {
+  display: block;
+}
+
+/* メインコンテンツの左右分割 */
+.main-content {
+  display: flex;
+  height: calc(100vh - 60px);
+}
+
+/* 左側：表とスクロール */
+.left-pane {
+  flex: 1;
+  padding: 20px;
+  box-sizing: border-box;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 表のスクロールコンテナ */
+.table-container {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  margin-bottom: 10px;
+}
+
+/* 表のスタイル */
+.styled-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.styled-table th,
+.styled-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+
+.styled-table th {
+  background-color: #eee;
+}
+
+.styled-table tr.selected {
+  background-color: #e3f2fd;
+}
+
+.styled-table tr:hover {
+  background-color: #f5f5f5;
+  cursor: pointer;
+}
+
+/* 表の下のボタン群 */
+.table-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* 右側：カメラと操作 */
+.right-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  box-sizing: border-box;
+  background-color: #fff;
+}
+
+/* カメラ映像部分 */
+.camera-area {
+  flex: 1;
+  background-color: #000;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2em;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+/* 画像切り替えボタン */
+.image-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+
+/* 原点登録ボタン */
+.origin-button {
+  display: flex;
+  justify-content: center;
+}
+
+/* static/css/styles.css */
+/* 既存スタイルはそのまま残し、以下を末尾に追加 */
+
+.camera-area {
+  position: relative;
+  overflow: hidden;
+}
+
+#cameraStream {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+#resizableBox {
+  display: none;
+  position: absolute;
+  border: 2px solid #16e927;
+  width: 200px;
+  height: 200px;
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+#resizableBox .resize-handle {
+  width: 10px;
+  height: 10px;
+  background: #000;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  cursor: se-resize;
+}
+
+.comment-display {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font-size: 10px;
+  color: #fff;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 2px 4px;
+  border-radius: 3px;
+  max-width: calc(100% - 20px);
+  word-wrap: break-word;
+  z-index: 1001;
+}
+
+/* 3D検知ページ用のスタイル */
+.detect-controls {
+  padding: 20px;
+}
+
+.control-section {
+  margin-bottom: 20px;
+}
+
+.control-section label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.control-section select,
+.control-section input[type="range"] {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 5px;
+}
+
+.detect-btn {
+  background-color: #007BFF;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: background-color 0.3s;
+}
+
+.detect-btn:hover {
+  background-color: #0056b3;
+}
+
+.detect-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.detection-status {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.detection-info {
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+
+#detectionOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#detectionStatus {
+  font-size: 18px;
+  font-weight: bold;
+  color: #007BFF;
+  margin: 10px 0;
+}
+
+#detectionResults {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+#detectedObjects {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* detect_3D.html用の追加スタイル */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f0f0f0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.upper-pane {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.buttom-pane {
+  background-color: #fff;
+  padding: 20px;
+  border-top: 1px solid #ccc;
+  flex-shrink: 0;
+}
+
+.top-left-pane {
+  flex: 1;
+  padding: 20px;
+  box-sizing: border-box;
+  background-color: #fff;
+}
+
+.top-right-pane {
+  flex: 1;
+  padding: 20px;
+  box-sizing: border-box;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-right-pane .camera-area {
+  flex: 1;
+  background-color: #000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.top-right-pane .camera-area img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.top-right-pane .image-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.top-right-pane .image-buttons button {
+  background-color: #007BFF;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.top-right-pane .image-buttons button:hover {
+  background-color: #0056b3;
+}
+
+.buttom-pane {
+  background-color: #fff;
+  padding: 20px;
+  border-top: 1px solid #ccc;
+  flex-shrink: 0;
+}
+
+.judge-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.judge-table th,
+.judge-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.judge-table th {
+  background-color: #eee;
+  font-weight: bold;
+}
+
+/* 判定結果のスタイル */
+.judgment.ok {
+  background-color: #d4edda;
+  color: #155724;
+  font-weight: bold;
+}
+
+.judgment.ng {
+  background-color: #f8d7da;
+  color: #721c24;
+  font-weight: bold;
+}
+
+.current-value {
+  font-weight: bold;
+  color: #0056b3;
+}
+
+.judge-btn-area {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.judge-btn-area button {
+  background-color: #007BFF;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.judge-btn-area button:hover {
+  background-color: #0056b3;
+}
+
+/* カウントダウンポップアップ */
+.countdown-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.countdown-content {
+  background-color: white;
+  border-radius: 20px;
+  padding: 50px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.countdown-number {
+  font-size: 120px;
+  font-weight: bold;
+  color: #007BFF;
+  line-height: 1;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.countdown-text {
+  font-size: 24px;
+  color: #333;
+  font-weight: bold;
+}
+
+/* 取得ボタンの無効化スタイル */
+.judge-btn-area button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.judge-btn-area button:disabled:hover {
+  background-color: #ccc;
+}
+
+/* judge-tableの選択状態 */
+.judge-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.judge-table tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+.judge-table tbody tr.selected {
+  background-color: #e3f2fd;
+  border-left: 4px solid #007BFF;
+}
+
+.judge-table tbody tr.selected:hover {
+  background-color: #e3f2fd;
+}
+
+/* 選択状態表示エリア */
+.selection-status-area {
+  padding: 10px;
+  text-align: center;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  margin-bottom: 10px;
+}
+
+.selection-status {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: normal;
+}
+
+/* 判定結果のスタイル */
+.judgment-ok {
+  color: #28a745;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.judgment-ng {
+  color: #dc3545;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+/* 総合判定の背景色 */
+.total-judgment-ok {
+  background-color: #90EE90 !important; /* 黄緑 */
+  color: #000;
+  font-weight: bold;
+}
+
+.total-judgment-ng {
+  background-color: #FF6B6B !important; /* 赤 */
+  color: #fff;
+  font-weight: bold;
+}

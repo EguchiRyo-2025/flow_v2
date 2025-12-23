@@ -1,0 +1,365 @@
+/* ==============================================
+   ▼ 全体・基本構造
+   ============================================== */
+
+/* 共通のベーススタイル */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* html, body 全体レイアウト */
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f5f5f5;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* コンテンツエリア（スクロール対応） */
+main#scrollable-area {
+  margin-top: 60px; /* 固定ヘッダー(30px) + ナビ(30px) */
+  padding: 10px;
+  background: #ffffff;
+  box-sizing: border-box;
+  min-width: 1730px; /* ページ全体の最小幅を指定し、横スクロールを有効化 */
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ==============================================
+   ▼ ヘッダー関連
+   ============================================== */
+
+/* グローバルヘッダー全体レイアウト */
+.global-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 30px;
+  padding: 0 0px;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  background: white;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* ヘッダー左側（MESロゴなど） */
+.header-left {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+/* ページタイトル（中央配置） */
+.page-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    font-size: 20px;
+    font-weight: bold;
+    line-height: 30px;
+}
+
+/* ヘッダー右側（パッケージ名など） */
+.header-right {
+    font-size: 20px;
+    font-weight: bold;
+    text-align: right;
+}
+
+/* ==============================================
+   ▼ メニューバー関連
+   ============================================== */
+
+/* ナビゲーションバー（青帯） */
+nav {
+    position: fixed;
+    top: 30px;
+    width: 100%;
+    background-color: blue;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    z-index: 999;
+}
+
+/* ナビゲーションリスト全体 */
+nav ul.main-nav {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    gap: 7px;
+    width: 100%;
+    justify-content: flex-start;
+    margin: 0;
+}
+
+/* ナビゲーションリスト項目 */
+nav ul li {
+    padding: 5px;
+    display: flex;
+    align-items: center;
+}
+
+/* ナビゲーションリンク */
+nav ul li a {
+    color: white;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    line-height: 30px;
+    padding: 0 10px;
+}
+
+/* リンクhover時 */
+nav ul li a:hover {
+    background-color: darkblue;
+    height: 25px;
+    line-height: 25px;
+    border-radius: 3px;
+}
+
+/* 右寄せ項目 */
+nav ul li.right {
+    margin-left: auto;
+}
+
+/* ドロップダウンメニュー */
+.dropdown-menu {
+    position: relative;
+}
+
+.dropdown-toggle {
+    cursor: pointer;
+}
+
+/* ドロップダウンメニュー本体 */
+.dropdown-submenu {
+    display: none;
+    position: absolute;
+    top: 30px;
+    left: 0;
+    background-color: rgb(0, 100, 255);
+    min-width: 120px;
+    list-style: none;
+    padding: 5px 0;
+    margin: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    border-radius: 4px;
+    z-index: 1000;
+}
+
+.dropdown-menu:hover .dropdown-submenu {
+    display: block;
+}
+
+/* ドロップダウンメニュー項目 */
+.dropdown-submenu li a {
+    color: white;
+    text-decoration: none;
+    display: block;
+    white-space: nowrap;
+    font-size: 13px;
+    height: 22px;
+    line-height: 22px;
+    padding: 2px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.dropdown-submenu li:last-child a {
+    border-bottom: none;
+}
+
+.dropdown-submenu li a:hover {
+    background-color: darkblue;
+}
+
+/* ==============================================
+   ▼ メッセージエリア関連
+   ============================================== */
+
+/* メッセージエリア共通設定 */
+#message-area {
+    position: fixed;
+    top: 60px;
+    width: 100%;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: white;
+    border-bottom: 1px solid #ccc;
+    box-sizing: border-box;
+    z-index: 998;
+}
+
+/* 情報メッセージ */
+.message-info {
+    background-color: rgb(85, 125, 235);
+    color: white;
+}
+
+/* 警告メッセージ */
+.message-warning {
+    background-color: yellow;
+    color: black;
+}
+
+/* 致命・エラーメッセージ */
+.message-critical,
+.message-error {
+    background-color: red;
+    color: white;
+}
+
+/* 成功メッセージ */
+.message-success {
+    background-color: rgb(85, 125, 235); /* message-info と同じ色 */
+    color: white;
+}
+
+/* ==============================================
+   ▼ ログイン画面・フォーム汎用スタイル
+   ============================================== */
+
+/* ログインフォーム全体 */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+/* ログインフォーム入力グループ */
+.login-form .input-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 260px;
+    gap: 15px;
+}
+
+/* ログインフォームのラベル */
+.login-form label {
+    width: 120px;
+    text-align: right;
+    font-size: 16px;
+}
+
+/* ログインフォームの入力ボックス */
+.login-form input {
+    width: 140px;
+    padding: 8px;
+    font-size: 16px;
+}
+
+/* ログインフォームのボタン */
+.login-form button {
+    width: 260px;
+    padding: 10px;
+    font-size: 16px;
+}
+
+/* ログインフォーム内のマージン */
+.login-form input,
+.login-form button {
+    margin-bottom: 12px;
+}
+
+/* ログインページコンテナ */
+.login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    height: 80vh;
+    padding-top: 10vh;
+}
+
+/* 汎用フォームコントロール */
+.form-control {
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 無効化されたログアウトボタンのスタイル */
+.disabled-logout-button {
+    color: #888;
+    pointer-events: none;
+    cursor: default;
+    opacity: 0.6;
+}
+
+/* ==============================================
+   ▼ ログ表示コンテナ 共通スタイル
+   ============================================== */
+.log-viewer-container,
+.camera-frame-wrapper {
+    height: 300px;
+    margin-top: 5px;
+    overflow: hidden;
+    padding: 0;
+    border: 1px solid #444;
+    background: black;
+    box-sizing: border-box;
+}
+
+.log-viewer-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* ==============================================
+   ▼ ボタン共通スタイル
+   ============================================== */
+
+/* ボタン共通スタイル */
+.btn-table-action {
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.btn-table-action:hover {
+    background-color: #0056b3;
+}
+
+.btn-table-action:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.btn-table-action.btn-danger,
+.btn-danger {
+    background-color: #dc3545;
+}
+
+.btn-table-action.btn-danger:hover,
+.btn-danger:hover {
+    background-color: #c82333;
+}

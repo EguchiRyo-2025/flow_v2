@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}3D検知 - Digital Workbench{% endblock %}
+
+{% block header %}3D検知{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="/modules/detect_3d/static/css/styles.css">
+{% endblock %}
+
+{% block content %}
+<div class="detection-page">
+  <div class="upper-pane">
+    <div class="top-left-pane">
+      <div class="table-container">
+        <table class="styled-table">
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>使用数</th>
+              <th>コメント</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- JavaScriptで動的に追加されます -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="top-right-pane">
+      <div class="camera-area">
+        <img id="cameraStream" src="/detection/stream/rgb" style="width:100%; height:auto;">
+      </div>
+      <div class="image-buttons">
+        <button id="colorBtn">カラー画像</button>
+        <button id="depthBtn">深度画像</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="buttom-pane">
+    <div class="judge-table-container">
+      <table class="judge-table">
+        <thead>
+          <tr>
+            <th rowspan="2">総合判定</th>
+            <th rowspan="2">原点No</th>
+            <th rowspan="2">判定No</th>
+            <th colspan="2">高さ範囲</th>
+            <th colspan="4">ピクセル判定</th>
+            <th rowspan="2">検知時間</th>
+            <th rowspan="2">コメント</th>
+          </tr>
+          <tr>
+            <th>下限</th>
+            <th>上限</th>
+            <th>下限</th>
+            <th>上限</th>
+            <th>現在値</th>
+            <th>判定</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- JavaScriptで動的に生成されます -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="selection-status-area">
+      <span id="selectionStatus" class="selection-status">判定行を選択してください</span>
+    </div>
+
+    <div class="judge-btn-area">
+      <button id="captureBtn">取得</button>
+      <button id="saveBtn">登録</button>
+      <button type="button" onclick="window.history.back()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- カウントダウンポップアップ -->
+<div id="countdownPopup" class="countdown-popup" style="display: none;">
+  <div class="countdown-content">
+    <div id="countdownNumber" class="countdown-number">3</div>
+    <div class="countdown-text">計測開始まで</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/modules/detect_3d/static/js/detect_3D.js"></script>
+{% endblock %} 

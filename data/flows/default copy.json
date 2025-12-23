@@ -1,0 +1,40 @@
+{
+  "name": "メインフロー",
+  "description": "",
+  "steps": [
+    {
+      "id": "W5$rum.hBh_itv=G7Wwh",
+      "type": "action",
+      "module": "mapping",
+      "action": "show_group",
+      "parameters": {
+        "group_id": 3
+      },
+      "description": "プロジェクション開始"
+    },
+    {
+      "id": "mqD(WhmYZs78es~vPJc~",
+      "type": "action",
+      "module": "detect_3d",
+      "action": "detect_touch",
+      "parameters": {
+        "origin_no": 1,
+        "judge_no": 1,
+        "timeout": 60
+      },
+      "on_error": "continue",
+      "description": "3D検知"
+    },
+    {
+      "id": "t-Lm`nKM@+pTc:)*HY{u",
+      "type": "action",
+      "module": "mapping",
+      "action": "hide_group",
+      "parameters": {
+        "group_id": 3
+      },
+      "description": "プロジェクション停止"
+    }
+  ],
+  "id": "default"
+}

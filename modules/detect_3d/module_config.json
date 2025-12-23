@@ -1,0 +1,91 @@
+{
+  "name": "detect_3d",
+  "display_name": "3D検知",
+  "version": "1.0.0",
+  "author": "Development Team",
+  "description": "3Dカメラによる物体検知・タッチ検知モジュール",
+  "capabilities": [
+    "register_origin",
+    "detect_touch",
+    "count_pixels",
+    "get_origins",
+    "save_judge_data",
+    "capture_pixel_range"
+  ],
+  "flow_nodes": [
+    {
+      "type": "register_origin",
+      "display_name": "原点登録",
+      "icon": "origin_icon.svg",
+      "properties": {
+        "origin_no": {
+          "type": "number",
+          "display_name": "原点番号",
+          "default": null
+        },
+        "points": {
+          "type": "array",
+          "display_name": "座標点（4点）",
+          "default": []
+        },
+        "comment": {
+          "type": "string",
+          "display_name": "コメント",
+          "default": ""
+        }
+      }
+    },
+    {
+      "type": "detect_touch",
+      "display_name": "タッチ検知",
+      "icon": "touch_icon.svg",
+      "properties": {
+        "origin_no": {
+          "type": "number",
+          "display_name": "原点番号",
+          "default": 1
+        },
+        "judge_no": {
+          "type": "number",
+          "display_name": "判定番号",
+          "default": 1
+        },
+        "timeout": {
+          "type": "number",
+          "display_name": "タイムアウト（秒）",
+          "default": 30
+        }
+      }
+    },
+    {
+      "type": "count_pixels",
+      "display_name": "ピクセル数カウント",
+      "icon": "count_icon.svg",
+      "properties": {
+        "points": {
+          "type": "array",
+          "display_name": "座標点（4点）",
+          "default": []
+        },
+        "depth_min": {
+          "type": "number",
+          "display_name": "深度最小値",
+          "default": 0
+        },
+        "depth_max": {
+          "type": "number",
+          "display_name": "深度最大値",
+          "default": 1000
+        }
+      }
+    }
+  ],
+  "api_endpoints": [
+    "/api/register_origin",
+    "/api/detect_3d",
+    "/api/count_pixels",
+    "/api/get_origins",
+    "/api/save_judge_data",
+    "/api/capture_pixel_range"
+  ]
+}

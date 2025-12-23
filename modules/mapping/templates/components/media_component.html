@@ -1,0 +1,47 @@
+<div class="media-component">
+    <h3>動画・画像設定</h3>
+    <div class="component-content">
+        <div class="form-group">
+            <label for="media-type">メディアタイプ:</label>
+            <select id="media-type" class="form-control">
+                <option value="image">画像</option>
+                <option value="video">動画</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="media-file">ファイル:</label>
+            <input type="file" id="media-file" class="form-control" accept="image/*,video/*">
+        </div>
+        
+        <div class="form-group">
+            <label for="media-width">幅:</label>
+            <input type="number" id="media-width" class="form-control" value="640">
+        </div>
+        
+        <div class="form-group">
+            <label for="media-height">高さ:</label>
+            <input type="number" id="media-height" class="form-control" value="480">
+        </div>
+        
+        <div class="form-group">
+            <label for="media-x">X座標:</label>
+            <input type="number" id="media-x" class="form-control" value="0">
+        </div>
+        
+        <div class="form-group">
+            <label for="media-y">Y座標:</label>
+            <input type="number" id="media-y" class="form-control" value="0">
+        </div>
+        
+        <div class="form-group" id="video-options" style="display:none;">
+            <label for="media-autoplay">自動再生:</label>
+            <input type="checkbox" id="media-autoplay">
+        </div>
+        
+        <div class="button-group">
+            <button class="btn btn-primary" id="add-media">追加</button>
+            <button class="btn btn-secondary" id="preview-media">プレビュー</button>
+        </div>
+    </div>
+</div>

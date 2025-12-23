@@ -1,0 +1,26 @@
+<div class="sound-component">
+    <h3>音設定</h3>
+    <div class="component-content">
+        <div class="form-group">
+            <label for="sound-file">音源ファイル:</label>
+            <input type="file" id="sound-file" class="form-control" accept="audio/*">
+        </div>
+
+            <div class="form-group">
+                <label for="comment">コメント:</label>
+                <input type="text" id="comment" class="form-control">
+            </div>
+        
+        <div class="form-group">
+            <label for="sound-volume">音量:</label>
+            <input type="range" id="sound-volume" class="form-control" min="0" max="100" value="50">
+            <span id="volume-value">50</span>%
+        </div>
+        
+        
+        <div class="button-group">
+            <button class="btn btn-primary" id="add-sound">追加</button>
+            <button class="btn btn-secondary" id="test-sound">テスト再生</button>
+        </div>
+    </div>
+</div>

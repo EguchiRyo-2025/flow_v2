@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{# レイアウト用CSSをhead_extraブロックで読み込む #}
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+
+  {# main#scrollable-areaのスタイルを上書き #}
+  <style>
+    main#scrollable-area {
+      padding: 0;
+      display: flex;
+      overflow: hidden;
+      margin-top: 60px; /* ヘッダー(30px) + ナビゲーション(30px) */
+      height: calc(100vh - 60px);
+    }
+  </style>
+  
+  {# 子テンプレートがさらにCSSを追加するためのブロック #}
+  {% block head_2col_extra %}{% endblock %}
+{% endblock %}
+
+
+{# base.htmlのcontentブロックを、2つの「フレーム」を持つ構造で上書き #}
+{% block content %}
+<div class="three-column-container">
+  
+  {# --- 左フレーム --- #}
+  <div class="content-frame column-left">
+    {% block content_left %}
+      {% endblock %}
+  </div>
+
+  <div class="column-middle"></div>
+
+  {# --- 右フレーム --- #}
+  <div class="content-frame column-right">
+    {% block content_right %}
+      {% endblock %}
+  </div>
+
+</div>
+{% endblock %}
