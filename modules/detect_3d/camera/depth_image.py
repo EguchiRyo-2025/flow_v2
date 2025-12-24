@@ -5,7 +5,13 @@ import json
 
 def _get_current_depth_frame():
     """カメラマネージャーから深度フレームを取得"""
-    return camera_manager.get_depth_frame()
+    if camera_manager is None:
+        return None
+    try:
+        return camera_manager.get_depth_frame()
+    except Exception as e:
+        print(f"深度フレーム取得エラー: {e}")
+        return None
 
 def generate_depth():
     """深度画像を生成するジェネレータ関数"""
@@ -110,6 +116,10 @@ def register_origin_logic(points):
 def detect_object_pixels_in_area(x1, y1, x2, y2, min_depth, max_depth):
     """指定領域内でオブジェクトのピクセル数を検出（生データ処理）"""
     try:
+        # カメラマネージャーのチェック
+        if camera_manager is None:
+            return {"error": "カメラマネージャーが初期化されていません"}
+        
         depth_data = _get_current_depth_frame()
         if depth_data is None:
             return {"error": "深度データを取得できませんでした"}

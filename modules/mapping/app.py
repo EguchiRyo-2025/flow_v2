@@ -85,12 +85,12 @@ def receive_debug_log():
     message = payload.pop('message', '') or '[DisplayDebug] 受信ログ'
 
     logger = current_app.logger
-    if level == 'error':
-        logger.error('%s | extra=%s', message, payload)
-    elif level == 'warning':
-        logger.warning('%s | extra=%s', message, payload)
-    else:
-        logger.info('%s | extra=%s', message, payload)
+    # if level == 'error':
+    #     logger.error('%s | extra=%s', message, payload)
+    # elif level == 'warning':
+    #     logger.warning('%s | extra=%s', message, payload)
+    # else:
+    #     logger.info('%s | extra=%s', message, payload)
 
     return jsonify({'success': True})
 

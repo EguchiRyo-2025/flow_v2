@@ -741,7 +741,7 @@ class DisplayWindow {
                 displayTarget: this.displayTarget,
                 currentGroupId: this.currentGroupId
             });
-            console.log(`[DisplayDebug:${event}]`, payload);
+            // console.log(`[DisplayDebug:${event}]`, payload);
 
             try {
                 const logBody = JSON.stringify({

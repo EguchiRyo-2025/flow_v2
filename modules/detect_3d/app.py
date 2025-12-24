@@ -243,6 +243,7 @@ def api_detect_3d():
     try:
         with ORIGIN_DATA_FILE.open('r', encoding='utf-8') as file:
             origin_data = json.load(file)
+            print(f"読み込んだ原点データ: {origin_data}")  # デバッグログ
         
         if not origin_data:
             return jsonify({"error": "登録された原点がありません"})

@@ -378,7 +378,7 @@
 		block.setPreviousStatement(true, 'FLOW_STEP');
 		block.setNextStatement(true, 'FLOW_STEP');
 		block.setColour(20);
-		block.setTooltip('3d_detectモジュールのdetect_touchアクションを実行し、結果を待機します。');
+		block.setTooltip('detect_3dモジュールのdetect_touchアクションを実行し、結果を待機します。');
 
 		refreshJudgeField(block, block.getFieldValue('ORIGIN_NO'));
 		updateDetectionMetadata(block, block.getFieldValue('ORIGIN_NO'), block.getFieldValue('JUDGE_NO'));
@@ -669,7 +669,7 @@
 				return {
 					id: block.id,
 					type: 'action',
-					module: '3d_detect',
+					module: 'detect_3d',
 					action: 'detect_touch',
 					parameters: {
 						origin_no: toNumberIfValid(block.getFieldValue('ORIGIN_NO')),
@@ -763,7 +763,7 @@
 			if (step.module === 'mapping' && step.action === 'hide_group') {
 				return 'flow_projection_hide';
 			}
-			if (step.module === '3d_detect' && step.action === 'detect_touch') {
+			if (step.module === 'detect_3d' && step.action === 'detect_touch') {
 				return 'flow_detection_wait';
 			}
 		}

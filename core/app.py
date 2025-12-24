@@ -88,10 +88,10 @@ def create_app(config_name='development'):
             module = importlib.import_module(module_path)
             bp = getattr(module, bp_name)
             app.register_blueprint(bp, url_prefix=url_prefix)
-            app.logger.info(f"✓ Registered blueprint: {bp_name} at {url_prefix}")
+            app.logger.info(f"[OK] Registered blueprint: {bp_name} at {url_prefix}")
         except Exception as e:
             import traceback
-            app.logger.error(f"✗ Failed to register {bp_name}: {e}")
+            app.logger.error(f"[ERROR] Failed to register {bp_name}: {e}")
             app.logger.error(traceback.format_exc())
     
     # 全ルートをデバッグ表示

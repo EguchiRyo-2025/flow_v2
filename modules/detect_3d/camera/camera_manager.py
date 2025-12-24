@@ -74,33 +74,46 @@ class CameraManager:
                     openni2.initialize(self._openni_path)
                 self._device = openni2.Device.open_any()
                 
-                # 両方のストリームを常に開始
-                self._depth_stream = self._device.create_depth_stream()
-                self._depth_stream.set_video_mode(c_api.OniVideoMode(
-                    pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_DEPTH_100_UM,
-                    resolutionX=640,
-                    resolutionY=480,
-                    fps=30
-                ))
-                self._depth_stream.start()
-                print("深度ストリームを開始しました")
+                # 両方のストリームを常に開始（既に存在する場合は再利用）
+                if self._depth_stream is None:
+                    self._depth_stream = self._device.create_depth_stream()
+                    self._depth_stream.set_video_mode(c_api.OniVideoMode(
+                        pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_DEPTH_100_UM,
+                        resolutionX=640,
+                        resolutionY=480,
+                        fps=30
+                    ))
+                    self._depth_stream.start()
+                    print("深度ストリームを開始しました")
+                else:
+                    print("深度ストリームは既に開始されています")
                 
-                self._rgb_stream = self._device.create_color_stream()
-                self._rgb_stream.set_video_mode(c_api.OniVideoMode(
-                    pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_RGB888,
-                    resolutionX=640,
-                    resolutionY=480,
-                    fps=30
-                ))
-                self._rgb_stream.start()
-                print("RGBストリームを開始しました")
+                if self._rgb_stream is None:
+                    self._rgb_stream = self._device.create_color_stream()
+                    self._rgb_stream.set_video_mode(c_api.OniVideoMode(
+                        pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_RGB888,
+                        resolutionX=640,
+                        resolutionY=480,
+                        fps=30
+                    ))
+                    self._rgb_stream.start()
+                    print("RGBストリームを開始しました")
+                else:
+                    print("RGBストリームは既に開始されています")
                 
                 self._camera_initialized = True
                 print("統一カメラシステムを初期化しました")
                 return True
             except Exception as e:
-                print(f"カメラ初期化エラー: {e}")
-                return False
+                error_str = str(e)
+                # ストリームが既に開かれている場合は正常とみなす
+                if 'open by other components' in error_str or 'OUT_OF_FLOW' in error_str:
+                    print(f"カメラストリームは既に使用中ですが、続行します: {e}")
+                    self._camera_initialized = True
+                    return True
+                else:
+                    print(f"カメラ初期化エラー: {e}")
+                    return False
     
     def _reset_streams_locked(self):
         """ストリームを停止して破棄"""
@@ -146,12 +159,15 @@ class CameraManager:
         now = time.time()
         error_str = str(capture_error)
         
-        # OUT_OF_FLOWエラーは一時的な競合状態なので、デバイスリセット不要
+        # OUT_OF_FLOWエラーはストリーム競合なので、リセットして再初期化
         if 'OUT_OF_FLOW' in error_str or 'open by other components' in error_str:
             if now - self._last_capture_error_logged_at > 5.0:
-                print(f"カメラ一時的競合（継続中）: {capture_error}")
+                print(f"カメラ競合検知、再初期化します: {capture_error}")
                 self._last_capture_error_logged_at = now
-            # デバイスリセットせずに継続
+            # ストリームをリセットして再初期化フラグを立てる
+            with self._stream_lock:
+                self._reset_streams_locked()
+            self._camera_initialized = False
             return
         
         # その他の深刻なエラーの場合のみログとリセット
@@ -202,6 +218,9 @@ class CameraManager:
                         with self._frame_condition:
                             self._latest_depth_frame = depth_array
                             self._frame_condition.notify_all()
+                    else:
+                        # フレームが取得できなかった場合もエラー扱い
+                        raise Exception("Depth frame read failed: frame is None")
 
                 if rgb_stream:
                     rgb_frame = rgb_stream.read_frame()
@@ -212,6 +231,9 @@ class CameraManager:
                         with self._frame_condition:
                             self._latest_rgb_frame = rgb_array
                             self._frame_condition.notify_all()
+                    else:
+                        # フレームが取得できなかった場合もエラー扱い
+                        raise Exception("RGB frame read failed: frame is None")
 
                 # 30fps を上限にする程度の待機
                 time.sleep(0.01)

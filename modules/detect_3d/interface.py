@@ -33,6 +33,7 @@ class Detection3DModule(ModuleInterface):
                 from .camera.camera_manager import camera_manager
                 self.camera_manager = camera_manager
                 self.logger.info("Camera manager initialized")
+                print("Camera manager initialized")
             except ImportError as e:
                 self.logger.warning(f"Camera manager import failed (may be OK in test environment): {e}")
                 self.camera_manager = None
@@ -95,6 +96,7 @@ class Detection3DModule(ModuleInterface):
             with open(self.origin_data_file, 'r', encoding='utf-8') as f:
                 try:
                     existing_data = json.load(f)
+                    print(f"Existing origin data loaded: {existing_data}")
                     if not isinstance(existing_data, list):
                         existing_data = []
                 except json.JSONDecodeError:
@@ -145,9 +147,13 @@ class Detection3DModule(ModuleInterface):
         """タッチ検知（リアルタイム監視）"""
         from .camera.depth_image import detect_object_pixels_in_area
         
+        # カメラマネージャーのチェック
+        if not self.camera_manager:
+            return {'success': False, 'error': 'カメラマネージャーが初期化されていません'}
+        
         origin_no = parameters.get('origin_no')
-        judge_no = parameters.get('judge_no', 1)
-        timeout = parameters.get('timeout', 30)
+        judge_no = parameters.get('judge_no')
+        timeout = parameters.get('timeout')
         
         # 原点データ読み込み
         if not self.origin_data_file.exists():
@@ -195,30 +201,38 @@ class Detection3DModule(ModuleInterface):
         detected_start = None
         
         while time.time() - start_time < timeout:
-            result = detect_object_pixels_in_area(x1, y1, x2, y2, depth_min, depth_max)
-            
-            if 'error' in result:
+            try:
+                result = detect_object_pixels_in_area(x1, y1, x2, y2, depth_min, depth_max)
+                
+                if 'error' in result:
+                    self.logger.warning(f"深度データ取得エラー: {result['error']}")
+                    time.sleep(0.1)
+                    continue
+                
+                pixel_count = result.get("pixel_count", 0)
+                
+                # 範囲内判定
+                if pixel_min <= pixel_count <= pixel_max:
+                    if detected_start is None:
+                        detected_start = time.time()
+                    elif time.time() - detected_start >= detect_time:
+                        # 検知成功
+                        return {
+                            'success': True,
+                            'detected': True,
+                            'pixel_count': pixel_count,
+                            'elapsed_time': time.time() - start_time,
+                            'message': 'タッチ検知成功'
+                        }
+                else:
+                    detected_start = None
+                
+                time.sleep(0.1)
+                
+            except Exception as e:
+                self.logger.error(f"タッチ検知処理エラー: {e}", exc_info=True)
+                time.sleep(0.1)
                 continue
-            
-            pixel_count = result.get("pixel_count", 0)
-            
-            # 範囲内判定
-            if pixel_min <= pixel_count <= pixel_max:
-                if detected_start is None:
-                    detected_start = time.time()
-                elif time.time() - detected_start >= detect_time:
-                    # 検知成功
-                    return {
-                        'success': True,
-                        'detected': True,
-                        'pixel_count': pixel_count,
-                        'elapsed_time': time.time() - start_time,
-                        'message': 'タッチ検知成功'
-                    }
-            else:
-                detected_start = None
-            
-            time.sleep(0.1)
         
         # タイムアウト
         return {
