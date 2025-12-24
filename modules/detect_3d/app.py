@@ -61,8 +61,7 @@ def stream_rgb():
     finally:
         with stream_lock:
             active_streams['rgb'] -= 1
-            if active_streams['rgb'] == 0:
-                camera_manager._need_rgb = False
+            # ストリームは常に実行し続ける
 
 @detection_bp.route('/stream/depth')
 def stream_depth():
@@ -73,8 +72,7 @@ def stream_depth():
     finally:
         with stream_lock:
             active_streams['depth'] -= 1
-            if active_streams['depth'] == 0:
-                camera_manager._need_depth = False
+            # ストリームは常に実行し続ける
 
 @detection_bp.route('/cleanup', methods=['POST'])
 def cleanup_camera():

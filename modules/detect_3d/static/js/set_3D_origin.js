@@ -363,18 +363,21 @@ document.addEventListener('DOMContentLoaded', () => {
     setupBoxEvents(box, handle);
   }
 
-  function switchStream(newSrc) {
-    // 既存のストリームを停止してから新しいストリームに切り替え
-    const existingStream = document.getElementById('cameraStream');
-    if (existingStream) {
-      existingStream.src = '';
-    }
-    cameraContainer.innerHTML = `<img id="cameraStream" src="${newSrc}">`;
-    console.log('原点設定画面: カメラストリームを切り替えました:', newSrc);
-  }
-
   // CSSクラスを使用してボタンのスタイルを切り替えるよう修正
   const cameraStream = document.getElementById('cameraStream');
+
+    if (colorBtn) {
+    colorBtn.addEventListener('click', function() {
+        try {
+            cameraStream.src = '/detection/stream/rgb';
+            colorBtn.classList.add('active');
+            depthBtn.classList.remove('active');
+            console.log('RGBストリームに切り替え');
+        } catch (error) {
+            console.error('RGBストリーム切り替えエラー:', error);
+        }
+    });
+  }
 
   if (depthBtn) {
     depthBtn.addEventListener('click', function() {
@@ -388,23 +391,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
   }
-
-  if (colorBtn) {
-    colorBtn.addEventListener('click', function() {
-        try {
-            cameraStream.src = '/detection/stream/rgb';
-            colorBtn.classList.add('active');
-            depthBtn.classList.remove('active');
-            console.log('RGBストリームに切り替え');
-        } catch (error) {
-            console.error('RGBストリーム切り替えエラー:', error);
-        }
-    });
-  }
   
-  // ページ読み込み時にデフォルトでRGBストリームを開始
+  // ページ読み込み時にデフォルトでRGBストリームを開始（遅延させて初期化）
   console.log('原点設定画面: カメラストリームを初期化します');
-  switchStream('/detection/stream/rgb');
+  setTimeout(() => {
+    cameraStream.src = '/detection/stream/rgb';
+    if (colorBtn) {
+      colorBtn.classList.add('active');
+    }
+    console.log('原点設定画面: カメラストリーム初期化完了');
+  }, 500); // 500ms遅延
 
   if (originBtn) {
     originBtn.addEventListener('click', () => {

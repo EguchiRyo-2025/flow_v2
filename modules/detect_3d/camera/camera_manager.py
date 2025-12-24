@@ -73,6 +73,28 @@ class CameraManager:
                 if not openni2.is_initialized():
                     openni2.initialize(self._openni_path)
                 self._device = openni2.Device.open_any()
+                
+                # 両方のストリームを常に開始
+                self._depth_stream = self._device.create_depth_stream()
+                self._depth_stream.set_video_mode(c_api.OniVideoMode(
+                    pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_DEPTH_100_UM,
+                    resolutionX=640,
+                    resolutionY=480,
+                    fps=30
+                ))
+                self._depth_stream.start()
+                print("深度ストリームを開始しました")
+                
+                self._rgb_stream = self._device.create_color_stream()
+                self._rgb_stream.set_video_mode(c_api.OniVideoMode(
+                    pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_RGB888,
+                    resolutionX=640,
+                    resolutionY=480,
+                    fps=30
+                ))
+                self._rgb_stream.start()
+                print("RGBストリームを開始しました")
+                
                 self._camera_initialized = True
                 print("統一カメラシステムを初期化しました")
                 return True
@@ -165,40 +187,11 @@ class CameraManager:
                 time.sleep(0.5)
                 continue
 
-            need_depth = self._need_depth
-            need_rgb = self._need_rgb
-
-            if not need_depth and not need_rgb:
-                time.sleep(0.05)
-                continue
-
             try:
                 with self._stream_lock:
-                    if need_depth:
-                        if self._depth_stream is None:
-                            self._depth_stream = self._device.create_depth_stream()
-                            self._depth_stream.set_video_mode(c_api.OniVideoMode(
-                                pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_DEPTH_100_UM,
-                                resolutionX=640,
-                                resolutionY=480,
-                                fps=30
-                            ))
-                            self._depth_stream.start()
-                            print("深度ストリームを開始しました")
-                    if need_rgb:
-                        if self._rgb_stream is None:
-                            self._rgb_stream = self._device.create_color_stream()
-                            self._rgb_stream.set_video_mode(c_api.OniVideoMode(
-                                pixelFormat=c_api.OniPixelFormat.ONI_PIXEL_FORMAT_RGB888,
-                                resolutionX=640,
-                                resolutionY=480,
-                                fps=30
-                            ))
-                            self._rgb_stream.start()
-                            print("RGBストリームを開始しました")
-
-                    depth_stream = self._depth_stream if need_depth else None
-                    rgb_stream = self._rgb_stream if need_rgb else None
+                    # 常に両方のストリームを使用
+                    depth_stream = self._depth_stream
+                    rgb_stream = self._rgb_stream
 
                 # ストリームのロックを解放してからフレームを読む
                 if depth_stream:
