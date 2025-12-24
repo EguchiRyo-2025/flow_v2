@@ -1,0 +1,100 @@
+{
+  "name": "mapping",
+  "display_name": "プロジェクションマッピング",
+  "version": "1.0.0",
+  "author": "Development Team",
+  "description": "プロジェクターによる画像・映像投影モジュール",
+  "capabilities": [
+    "upload_image",
+    "create_group",
+    "add_element_to_group",
+    "update_element",
+    "delete_element",
+    "show_group",
+    "hide_group",
+    "open_preview",
+    "get_groups",
+    "get_group_elements"
+  ],
+  "flow_nodes": [
+    {
+      "type": "show_group",
+      "display_name": "グループ表示",
+      "icon": "show_icon.svg",
+      "properties": {
+        "group_id": {
+          "type": "number",
+          "display_name": "グループID",
+          "default": null
+        },
+        "display_target": {
+          "type": "string",
+          "display_name": "表示先",
+          "default": "monitor"
+        },
+        "state": {
+          "type": "string",
+          "display_name": "状態（on/off）",
+          "default": "on"
+        }
+      }
+    },
+    {
+      "type": "hide_group",
+      "display_name": "グループ非表示",
+      "icon": "hide_icon.svg",
+      "properties": {
+        "group_id": {
+          "type": "number",
+          "display_name": "グループID",
+          "default": null
+        },
+        "display_target": {
+          "type": "string",
+          "display_name": "表示先",
+          "default": "monitor"
+        }
+      }
+    },
+    {
+      "type": "show_image",
+      "display_name": "画像表示",
+      "icon": "image_icon.svg",
+      "properties": {
+        "image_path": {
+          "type": "string",
+          "display_name": "画像パス",
+          "default": ""
+        },
+        "display_target": {
+          "type": "string",
+          "display_name": "表示先",
+          "default": "monitor"
+        },
+        "x": {
+          "type": "number",
+          "display_name": "X座標",
+          "default": 0
+        },
+        "y": {
+          "type": "number",
+          "display_name": "Y座標",
+          "default": 0
+        },
+        "scale": {
+          "type": "number",
+          "display_name": "スケール",
+          "default": 1.0
+        }
+      }
+    }
+  ],
+  "api_endpoints": [
+    "/api/upload/image",
+    "/api/groups",
+    "/api/group_elements",
+    "/api/elements/<element_id>",
+    "/api/open_preview",
+    "/api/displays"
+  ]
+}

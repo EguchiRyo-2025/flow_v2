@@ -26,6 +26,9 @@ detection_bp = Blueprint('detection_bp', __name__,
 active_streams = {'rgb': 0, 'depth': 0}
 stream_lock = threading.Lock()
 
+# Track active transitions for /origin and /detect
+active_transitions = {'origin': 0, 'detect': 0}
+
 # アプリケーション終了時にカメラリソースをクリーンアップ
 @atexit.register
 def cleanup():
@@ -33,7 +36,13 @@ def cleanup():
 
 @detection_bp.before_request
 def before_request():
-    """リクエスト前処理 - カメラリソース初期化"""
+    """リクエスト前処理 - ページ表示時は同期処理を避け、クリーンアップを非同期でスケジュールする
+    実際の初期化は最初のフレーム要求時に行う（get_*_frame 内で安全に初期化）。"""
+    try:
+        print("[detection_bp] before_request: scheduling async cleanup")
+        threading.Thread(target=camera_manager.cleanup, daemon=True).start()
+    except Exception as e:
+        print(f"[detection_bp] before_request: cleanup schedule failed: {e}")
     g.camera_active = True
 
 # teardown_requestは無効化 - ページ遷移時のJavaScript側のクリーンアップで対応
@@ -45,12 +54,24 @@ def before_request():
 # 実際のURL: /detection/origin
 @detection_bp.route('/origin')
 def detection_origin():
-    return render_template('set_3D_origin.html')
+    with stream_lock:
+        active_transitions['origin'] += 1
+    try:
+        return render_template('set_3D_origin.html')
+    finally:
+        with stream_lock:
+            active_transitions['origin'] -= 1
 
 # 実際のURL: /detection/detect
 @detection_bp.route('/detect')
 def detect_3d():
-    return render_template('detect_3D.html')
+    with stream_lock:
+        active_transitions['detect'] += 1
+    try:
+        return render_template('detect_3D.html')
+    finally:
+        with stream_lock:
+            active_transitions['detect'] -= 1
 
 @detection_bp.route('/stream/rgb')
 def stream_rgb():
@@ -82,18 +103,19 @@ def cleanup_camera():
     import time
     try:
         print("カメラクリーンアップリクエスト受信")
-        
+
         with stream_lock:
             active_streams['rgb'] = 0
             active_streams['depth'] = 0
-        
+
         # カメラのニーズフラグをリセット
         camera_manager._need_rgb = False
         camera_manager._need_depth = False
-        
+
+
         # 少し待機してストリームが完全に停止するのを待つ
         time.sleep(0.3)
-        
+
         print("カメラクリーンアップ完了")
         return jsonify({'success': True, 'message': 'Camera resources cleaned up'})
     except Exception as e:
@@ -456,6 +478,19 @@ def api_capture_pixel_range():
         print(f"5フレーム計測API例外エラー: {e}")
         return jsonify({"error": f"5フレーム計測エラー: {e}"})
 
+
+# --- カメラ初期化API: /detection/init ---
+@detection_bp.route('/init', methods=['POST'])
+def init_camera():
+    """カメラを明示的に初期化するAPI"""
+    try:
+        result = camera_manager._initialize_camera()
+        if result:
+            return jsonify({'success': True, 'message': 'カメラ初期化成功'})
+        else:
+            return jsonify({'success': False, 'error': 'カメラ初期化失敗（OPENNI_PATH未設定またはデバイスエラー）'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'カメラ初期化例外: {e}'}), 500
 
 def create_app():
     """Standalone application factory for legacy usage."""

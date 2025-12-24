@@ -146,6 +146,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('Failed to update mappingPageActive flag on flow designer:', error);
   }
 
+
+  // --- Flowページ入室時にカメラ初期化APIを呼ぶ ---
+  try {
+    await fetch('/detection/init', { method: 'POST', keepalive: true });
+    console.log('[FlowDesigner] カメラ初期化リクエスト送信');
+  } catch (err) {
+    console.warn('[FlowDesigner] カメラ初期化送信エラー:', err);
+  }
+
   await loadModules();
 
   // デフォルトのフローを自動ロード
@@ -342,7 +351,7 @@ async function saveFlow() {
       alert(`ステップ ${i + 1} のプロジェクショングループを選択してください`);
       return;
     }
-    if (step.module === '3d_detect' && step.action === 'detect_touch') {
+    if (step.module === 'detect_3d' && step.action === 'detect_touch') {
       if (!step.parameters || step.parameters.origin_no === undefined || step.parameters.origin_no === '') {
         alert(`ステップ ${i + 1} の原点を選択してください`);
         return;
@@ -923,3 +932,21 @@ function addLog(type, message) {
     logContainer.removeChild(logContainer.firstChild);
   }
 }
+
+// --- カメラリソース競合防止: ページ離脱時に明示的クリーンアップ ---
+function cleanupCameraOnFlowPageLeave() {
+  // 3DカメラAPIのクリーンアップエンドポイントを呼ぶ
+  try {
+    fetch('/detection/cleanup', {
+      method: 'POST',
+      keepalive: true
+    });
+    console.log('[FlowDesigner] カメラリソースクリーンアップリクエスト送信');
+  } catch (err) {
+    console.warn('[FlowDesigner] カメラクリーンアップ送信エラー:', err);
+  }
+}
+
+window.addEventListener('beforeunload', cleanupCameraOnFlowPageLeave);
+window.addEventListener('pagehide', cleanupCameraOnFlowPageLeave);
+// --- 既存のclearFlowDesignerFlagsも維持 ---

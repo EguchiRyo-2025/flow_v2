@@ -5,6 +5,8 @@ if (!window.pixelCountInterval) {
     window.pixelCountInterval = null;
 }
 
+let isCameraBusy = false; // カメラの状態を管理
+
 // カメラクリーンアップ関数（確実に実行）
 function cleanupCamera() {
     console.log('検知画面: カメラクリーンアップ開始');
@@ -35,7 +37,52 @@ function cleanupCamera() {
     }
 }
 
+async function initializeCameraStream() {
+    if (isCameraBusy) {
+        console.log("カメラは現在使用中です。初期化をスキップします。");
+        return;
+    }
+    isCameraBusy = true;
+    try {
+        const response = await fetch('/api/camera/initialize', { method: 'POST' });
+        if (response.ok) {
+            console.log("カメラストリームを初期化しました。");
+        } else {
+            console.error("カメラ初期化に失敗しました:", response.statusText);
+        }
+    } catch (error) {
+        console.error("カメラ初期化エラー:", error);
+    } finally {
+        isCameraBusy = false;
+    }
+}
+
+async function cleanupCameraStream() {
+    if (isCameraBusy) {
+        console.log("カメラは現在使用中です。クリーンアップをスキップします。");
+        return;
+    }
+    isCameraBusy = true;
+    try {
+        const response = await fetch('/api/camera/cleanup', { method: 'POST', keepalive: true });
+        if (response.ok) {
+            console.log("カメラストリームをクリーンアップしました。");
+        } else {
+            console.error("カメラクリーンアップに失敗しました:", response.statusText);
+        }
+    } catch (error) {
+        console.error("カメラクリーンアップエラー:", error);
+    } finally {
+        isCameraBusy = false;
+    }
+}
+
 // ページ離脱時のクリーンアップ
+function cleanupOnPageLeave() {
+    console.log('3D検出画面: ページ離脱時のクリーンアップ開始');
+    cleanupCameraStream();
+}
+
 window.addEventListener('beforeunload', cleanupCamera);
 window.addEventListener('pagehide', cleanupCamera);
 
@@ -261,6 +308,17 @@ window.getAllJudgmentResults = function() {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('3D検出画面: DOM読み込み完了');
+
+    // カメラストリームを初期化
+    initializeCameraStream();
+
+    // ページ終了時のクリーンアップ
+    window.addEventListener('beforeunload', cleanupCameraStream);
+    window.addEventListener('pagehide', cleanupCameraStream);
+});
+
+document.addEventListener('DOMContentLoaded', function() {
     try {
         localStorage.setItem('mappingPageActive', 'false');
     } catch (error) {
@@ -330,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (cameraStream && colorBtn) {
                 setTimeout(() => {
                     cameraStream.src = '/detection/stream/rgb';
-                    colorBtn.classList.add('active');
+                    colorBtn.style.backgroundColor = '#0056b3';
                     console.log('カメラストリーム初期化完了');
                 }, 500); // 500ms遅延
             }
@@ -347,8 +405,10 @@ document.addEventListener('DOMContentLoaded', function() {
         colorBtn.addEventListener('click', function() {
             try {
                 cameraStream.src = '/detection/stream/rgb';
-                colorBtn.classList.add('active');
-                depthBtn.classList.remove('active');
+                colorBtn.style.backgroundColor = '#0056b3';
+                if (depthBtn) {
+                    depthBtn.style.backgroundColor = '#007BFF';
+                }
                 console.log('RGBストリームに切り替え');
             } catch (error) {
                 console.error('RGBストリーム切り替えエラー:', error);
@@ -361,8 +421,10 @@ document.addEventListener('DOMContentLoaded', function() {
         depthBtn.addEventListener('click', function() {
             try {
                 cameraStream.src = '/detection/stream/depth';
-                depthBtn.classList.add('active');
-                colorBtn.classList.remove('active');
+                depthBtn.style.backgroundColor = '#0056b3';
+                if (colorBtn) {
+                    colorBtn.style.backgroundColor = '#007BFF';
+                }
                 console.log('深度ストリームに切り替え');
             } catch (error) {
                 console.error('深度ストリーム切り替えエラー:', error);
@@ -826,175 +888,123 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 clearInterval(countdownInterval);
                 popup.style.display = 'none';
-                if (callback) callback();
+                
+                // コールバックを実行
+                if (typeof callback === 'function') {
+                    callback();
+                }
             }
         }, 1000);
     }
 
-    // 5フレーム計測機能
+    // 5フレーム分の計測を行う関数
     function capture5Frames(originNo, judgeNo, originData) {
-        // 既に保存されている座標は実際のカメラ座標なので、そのまま使用
-        const requestData = {
-            origin_no: originNo,
-            judge_no: judgeNo,
-            points: originData.points,  // 既に変換済みの座標
-            depth_min: originData.depth.depth_min,
-            depth_max: originData.depth.depth_max
-        };
-
-        console.log('5フレーム計測開始:', requestData);
-
-        // タイムアウト付きfetch
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒タイムアウト
+        console.log(`5フレーム計測開始: 原点${originNo}, 判定${judgeNo}`);
         
-        fetch('/detection/api/capture_pixel_range', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestData),
-            signal: controller.signal
-        })
-        .then(response => response.json())
-        .then(data => {
-            clearTimeout(timeoutId);
-            console.log('5フレーム計測結果:', data);
+        // 計測結果を保存する配列
+        const results = [];
+        
+        // 5回の計測を実行
+        for (let i = 0; i < 5; i++) {
+            // ピクセルカウントを一時停止
+            if (window.pixelCountInterval) {
+                clearInterval(window.pixelCountInterval);
+                console.log('ピクセルカウントを一時停止');
+            }
             
-            if (data.error) {
-                alert(`計測エラー: ${data.error}`);
-                return;
-            }
-
-            if (data.success) {
-                // 判定テーブルのピクセル判定下限・上限を更新
-                const pixelMinCell = selectedJudgeRow.children[5]; // ピクセル判定下限
-                const pixelMaxCell = selectedJudgeRow.children[6]; // ピクセル判定上限
-                
-                if (pixelMinCell && pixelMaxCell) {
-                    pixelMinCell.textContent = data.pixel_min;
-                    pixelMaxCell.textContent = data.pixel_max;
-                }
-
-                // 成功メッセージ
-                console.log('計測結果をテーブルに反映済み、リアルタイム監視を継続');
-                alert(`計測完了!\nピクセル範囲: ${data.pixel_min} - ${data.pixel_max}\nフレーム値: [${data.frame_counts.join(', ')}]`);
-                
-                // リアルタイム監視が継続されていることを確認
-                if (pixelCountInterval) {
-                    console.log('リアルタイム監視は正常に動作中');
-                } else {
-                    console.warn('リアルタイム監視が停止している可能性があります');
-                }
-            }
-        })
-        .catch(error => {
-            clearTimeout(timeoutId);
-            console.error('5フレーム計測エラー:', error);
+            // 現在の時刻を取得
+            const timestamp = new Date().toISOString();
             
-            if (error.name === 'AbortError') {
-                alert('計測がタイムアウトしました。カメラの接続を確認してください。');
-            } else if (error.message.includes('Failed to fetch')) {
-                alert('サーバーとの通信に失敗しました。アプリケーションが動作しているか確認してください。');
-            } else {
-                alert(`計測エラー: ${error.message}`);
-            }
-        })
-        .finally(() => {
-            // 取得ボタンを再度有効化（選択状態を維持）
-            const captureBtn = document.getElementById('captureBtn');
-            if (captureBtn && selectedJudgeRow) {
-                captureBtn.disabled = false;
-                const originNo = selectedJudgeRow.dataset.originNo;
-                const judgeNo = selectedJudgeRow.dataset.judgeNo;
-                captureBtn.textContent = `取得 (原点${originNo}-判定${judgeNo})`;
-            } else {
-                resetCaptureButton();
-            }
-        });
-    }
-
-    // 登録ボタンのクリックイベント
-    const saveBtn = document.getElementById('saveBtn');
-    if (saveBtn) {
-        saveBtn.addEventListener('click', function() {
-            if (!currentSelectedOrigin) {
-                alert('原点を選択してください');
-                return;
-            }
-
-            // 現在表示されている判定テーブルのデータを収集
-            const judgeRows = document.querySelectorAll('.judge-table tbody tr');
-            const judgeData = [];
-
-            judgeRows.forEach(row => {
-                const originNo = parseInt(row.dataset.originNo);
-                const judgeNo = parseInt(row.dataset.judgeNo);
-                
-                if (originNo === currentSelectedOrigin.No) {
-                    const pixelMinCell = row.children[5];  // ピクセル判定下限
-                    const pixelMaxCell = row.children[6];  // ピクセル判定上限
-                    const detectTimeCell = row.children[9]; // 検知時間
-                    const commentCell = row.children[10];   // コメント
-                    
-                    const judgeItem = {
-                        judge_no: judgeNo,
-                        pixel_min: pixelMinCell.textContent.trim(),
-                        pixel_max: pixelMaxCell.textContent.trim(),
-                        detect_time: detectTimeCell.textContent.trim(),
-                        comment: commentCell.textContent.trim()
-                    };
-                    
-                    judgeData.push(judgeItem);
-                }
-            });
-
-            if (judgeData.length === 0) {
-                alert('保存するデータがありません');
-                return;
-            }
-
-            // サーバーに送信
-            const requestData = {
-                origin_no: currentSelectedOrigin.No,
-                judge_data: judgeData
+            // 計測データを生成
+            const data = {
+                origin_no: originNo,
+                judge_no: judgeNo,
+                timestamp: timestamp,
+                pixel_count: parseInt(document.querySelector('.current-value').textContent) || 0
             };
-
-            console.log('判定設定保存要求:', requestData);
-
-            fetch('/detection/api/save_judge_data', {
+            
+            console.log(`計測データ: ${JSON.stringify(data)}`);
+            
+            // サーバーに計測データを送信
+            fetch('/detection/api/capture_frame', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(requestData)
+                body: JSON.stringify(data)
             })
             .then(response => response.json())
             .then(data => {
-                console.log('判定設定保存結果:', data);
+                console.log('サーバー応答:', data);
                 
-                if (data.error) {
-                    alert(`保存エラー: ${data.error}`);
-                    return;
-                }
-
                 if (data.success) {
-                    alert('判定設定を保存しました');
-                    // 原点データを再読み込み（更新された設定を反映）
-                    const selectedOriginNo = currentSelectedOrigin.No;
-                    loadOriginData().then(() => {
-                        // 同じ原点を再選択してjudge-tableを再表示
-                        const updatedOrigin = originDataList.find(origin => origin.No === selectedOriginNo);
-                        if (updatedOrigin) {
-                            showJudgeTableForOrigin(updatedOrigin);
-                        }
-                    });
+                    results.push(data.result);
+                    console.log(`フレーム${i+1}の計測結果を保存:`, data.result);
+                } else {
+                    console.error(`フレーム${i+1}の計測に失敗:`, data.message);
                 }
             })
             .catch(error => {
-                console.error('判定設定保存エラー:', error);
-                alert(`保存エラー: ${error.message}`);
+                console.error(`フレーム${i+1}の計測中にエラー発生:`, error);
+            })
+            .finally(() => {
+                // 最後のフレーム以外は待機
+                if (i < 4) {
+                    setTimeout(() => {
+                        console.log(`フレーム${i+1}の計測完了、次のフレームへ`);
+                    }, 1000); // 1秒待機
+                } else {
+                    // 最後のフレーム計測後の処理
+                    setTimeout(() => {
+                        console.log('全フレームの計測が完了しました:', results);
+                        
+                        // 結果を表示
+                        displayCaptureResults(results);
+                        
+                        // ピクセルカウントを再開
+                        startPixelCounting(originData);
+                    }, 1000);
+                }
             });
+        }
+    }
+
+    // 計測結果を表示する関数
+    function displayCaptureResults(results) {
+        const resultTableBody = document.querySelector('#resultTable tbody');
+        if (!resultTableBody) return;
+        
+        // テーブルをクリア
+        resultTableBody.innerHTML = '';
+        
+        results.forEach((result, index) => {
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${result.timestamp}</td>
+                <td>${result.pixel_count}</td>
+                <td>${result.judge_result}</td>
+            `;
+            
+            resultTableBody.appendChild(row);
+        });
+        
+        // 結果ポップアップを表示
+        const resultPopup = document.getElementById('resultPopup');
+        if (resultPopup) {
+            resultPopup.style.display = 'block';
+        }
+    }
+
+    // 結果ポップアップの閉じるボタン
+    const closeButton = document.getElementById('closeResultButton');
+    if (closeButton) {
+        closeButton.addEventListener('click', function() {
+            const resultPopup = document.getElementById('resultPopup');
+            if (resultPopup) {
+                resultPopup.style.display = 'none';
+            }
         });
     }
 });

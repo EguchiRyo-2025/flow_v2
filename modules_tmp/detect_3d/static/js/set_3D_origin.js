@@ -13,6 +13,54 @@ function convertPointsForCamera(points) {
     ]);
 }
 
+let isCameraBusy = false; // カメラの状態を管理
+
+async function initializeCameraStream() {
+    if (isCameraBusy) {
+        console.log("カメラは現在使用中です。初期化をスキップします。");
+        return;
+    }
+    isCameraBusy = true;
+    try {
+        const response = await fetch('/api/camera/initialize', { method: 'POST' });
+        if (response.ok) {
+            console.log("カメラストリームを初期化しました。");
+        } else {
+            console.error("カメラ初期化に失敗しました:", response.statusText);
+        }
+    } catch (error) {
+        console.error("カメラ初期化エラー:", error);
+    } finally {
+        isCameraBusy = false;
+    }
+}
+
+async function cleanupCameraStream() {
+    if (isCameraBusy) {
+        console.log("カメラは現在使用中です。クリーンアップをスキップします。");
+        return;
+    }
+    isCameraBusy = true;
+    try {
+        const response = await fetch('/api/camera/cleanup', { method: 'POST', keepalive: true });
+        if (response.ok) {
+            console.log("カメラストリームをクリーンアップしました。");
+        } else {
+            console.error("カメラクリーンアップに失敗しました:", response.statusText);
+        }
+    } catch (error) {
+        console.error("カメラクリーンアップエラー:", error);
+    } finally {
+        isCameraBusy = false;
+    }
+}
+
+// ページ遷移時のクリーンアップ
+function cleanupOnPageLeave() {
+    console.log('原点設定画面: ページ離脱時のクリーンアップ開始');
+    cleanupCameraStream();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   try {
     localStorage.setItem('mappingPageActive', 'false');
@@ -20,44 +68,10 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn('Failed to update mappingPageActive flag on origin page:', error);
   }
   console.log('原点設定画面: DOM読み込み完了');
-  
-  // ページ遷移時のクリーンアップ（どのページから来てもカメラリソースを確実に解放）
-  function cleanupOnPageLeave() {
-    console.log('原点設定画面: ページ離脱時のクリーンアップ開始');
-    
-    // カメラストリームを停止（RGB/Depth両対応）
-    const cameraStream = document.getElementById('cameraStream');
-    if (cameraStream) {
-      cameraStream.src = '';
-      console.log('原点設定画面: カメラストリーム（RGB/Depth）を停止しました');
-    }
-    
-    // インターバルをクリア
-    if (window.pixelCountInterval) {
-      clearInterval(window.pixelCountInterval);
-      window.pixelCountInterval = null;
-      console.log('原点設定画面: インターバルを停止しました');
-    }
-    
-    // サーバーにクリーンアップを通知（keepalive: trueで確実に送信）
-    try {
-      fetch('/detection/cleanup', {
-        method: 'POST',
-        keepalive: true
-      });
-      console.log('原点設定画面: クリーンアップ通知を送信しました');
-    } catch (err) {
-      console.warn('カメラクリーンアップ通知エラー:', err);
-    }
-  }
-  
-  // ページ読み込み時にも既存のインターバルをクリア
-  if (window.pixelCountInterval) {
-    console.log('原点設定画面: 読み込み時に既存のインターバルを停止');
-    clearInterval(window.pixelCountInterval);
-    window.pixelCountInterval = null;
-  }
-  
+
+  // カメラストリームを初期化
+  initializeCameraStream();
+
   window.addEventListener('beforeunload', cleanupOnPageLeave);
   window.addEventListener('pagehide', cleanupOnPageLeave);
   window.addEventListener('unload', cleanupOnPageLeave);
@@ -373,32 +387,15 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('原点設定画面: カメラストリームを切り替えました:', newSrc);
   }
 
-  // CSSクラスを使用してボタンのスタイルを切り替えるよう修正
-  const cameraStream = document.getElementById('cameraStream');
-
-  if (depthBtn) {
-    depthBtn.addEventListener('click', function() {
-        try {
-            cameraStream.src = '/detection/stream/depth';
-            depthBtn.classList.add('active');
-            colorBtn.classList.remove('active');
-            console.log('深度ストリームに切り替え');
-        } catch (error) {
-            console.error('深度ストリーム切り替えエラー:', error);
-        }
+  if (colorBtn) {
+    colorBtn.addEventListener('click', () => {
+      switchStream('/detection/stream/rgb');
     });
   }
 
-  if (colorBtn) {
-    colorBtn.addEventListener('click', function() {
-        try {
-            cameraStream.src = '/detection/stream/rgb';
-            colorBtn.classList.add('active');
-            depthBtn.classList.remove('active');
-            console.log('RGBストリームに切り替え');
-        } catch (error) {
-            console.error('RGBストリーム切り替えエラー:', error);
-        }
+  if (depthBtn) {
+    depthBtn.addEventListener('click', () => {
+      switchStream('/detection/stream/depth');
     });
   }
   
@@ -476,9 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 5. データの準備と送信
         const originData = {
             origin_No: getMaxNumber(),
-            point: convertedPoints,  // 変換された座標を使用
-            comment: currentComment, // 現在のコメントを追加
-            depth: [0, 0] // depthはバックエンドで計算・上書きされる
+            point: convertedPoints  // 変換された座標を使用
         };
 
         fetch('/detection/register_origin', {

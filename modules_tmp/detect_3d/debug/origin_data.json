@@ -3,31 +3,31 @@
     "No": 1,
     "points": [
       [
-        442,
-        233
+        378,
+        253
       ],
       [
-        391,
-        233
+        326,
+        253
       ],
       [
-        391,
-        269
+        326,
+        291
       ],
       [
-        442,
-        269
+        378,
+        291
       ]
     ],
     "depth": {
-      "depth_min": 3686,
-      "depth_max": 3926
+      "depth_min": 5529,
+      "depth_max": 5775
     },
-    "comment": "test",
+    "comment": "",
     "judge_settings": {
       "judge1": {
         "pixel_min": 0,
-        "pixel_max": 0,
+        "pixel_max": 300,
         "detect_time": 0.0,
         "comment": ""
       },

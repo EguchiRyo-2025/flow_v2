@@ -27,28 +27,35 @@ class Detection3DModule(ModuleInterface):
         """モジュールの初期化"""
         try:
             self.logger.info("Initializing 3D Detection module...")
+            print("[detect_3d] initialize: start")
             
             # camera_managerのインポートと初期化
             try:
                 from .camera.camera_manager import camera_manager
                 self.camera_manager = camera_manager
                 self.logger.info("Camera manager initialized")
+                print("[detect_3d] camera_manager initialized")
             except ImportError as e:
                 self.logger.warning(f"Camera manager import failed (may be OK in test environment): {e}")
+                print(f"[detect_3d] Camera manager import failed: {e}")
                 self.camera_manager = None
             
             # 原点データファイルのパス設定
             module_dir = Path(__file__).parent
             debug_dir = module_dir / 'debug'
+            print(f"[detect_3d] debug_dir: {debug_dir}")
             os.makedirs(debug_dir, exist_ok=True)
             self.origin_data_file = debug_dir / 'origin_data.json'
+            print(f"[detect_3d] origin_data_file: {self.origin_data_file}")
             
             self._initialized = True
             self.logger.info("3D Detection module initialized successfully")
+            print("[detect_3d] initialize: success")
             return True
             
         except Exception as e:
             self.logger.error(f"Failed to initialize 3D Detection module: {e}", exc_info=True)
+            print(f"[detect_3d] initialize: exception: {e}")
             return False
     
     def execute_action(self, action_type: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
