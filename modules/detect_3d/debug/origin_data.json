@@ -3,31 +3,77 @@
     "No": 1,
     "points": [
       [
-        304,
-        111
+        459,
+        244
       ],
       [
-        255,
-        111
+        403,
+        244
       ],
       [
-        255,
-        147
+        403,
+        274
       ],
       [
-        304,
-        147
+        459,
+        274
       ]
     ],
     "depth": {
-      "depth_min": 5046,
-      "depth_max": 5271
+      "depth_min": 4368,
+      "depth_max": 4598
     },
     "comment": "test",
     "judge_settings": {
       "judge1": {
         "pixel_min": 0,
-        "pixel_max": 250,
+        "pixel_max": 15,
+        "detect_time": 0.0,
+        "comment": ""
+      },
+      "judge2": {
+        "pixel_min": null,
+        "pixel_max": null,
+        "detect_time": 0.0,
+        "comment": ""
+      },
+      "judge3": {
+        "pixel_min": null,
+        "pixel_max": null,
+        "detect_time": 0.0,
+        "comment": ""
+      }
+    }
+  },
+  {
+    "No": 2,
+    "points": [
+      [
+        300,
+        200
+      ],
+      [
+        340,
+        200
+      ],
+      [
+        340,
+        240
+      ],
+      [
+        300,
+        240
+      ]
+    ],
+    "depth": {
+      "depth_min": 43391,
+      "depth_max": 65277
+    },
+    "comment": "Flow test origin",
+    "judge_settings": {
+      "judge1": {
+        "pixel_min": null,
+        "pixel_max": null,
         "detect_time": 0.0,
         "comment": ""
       },

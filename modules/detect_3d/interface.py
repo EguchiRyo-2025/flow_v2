@@ -28,15 +28,26 @@ class Detection3DModule(ModuleInterface):
         try:
             self.logger.info("Initializing 3D Detection module...")
             
-            # camera_managerのインポートと初期化
+            # camera_manager は Flask current_app から取得する
+            # （core/app.pyで既にアタッチされている）
             try:
-                from .camera.camera_manager import camera_manager
-                self.camera_manager = camera_manager
-                self.logger.info("Camera manager initialized")
-                print("Camera manager initialized")
-            except ImportError as e:
-                self.logger.warning(f"Camera manager import failed (may be OK in test environment): {e}")
-                self.camera_manager = None
+                from flask import current_app
+                if hasattr(current_app, 'camera_manager'):
+                    self.camera_manager = current_app.camera_manager
+                    self.logger.info(f"Camera manager obtained from Flask app: instance_id={id(self.camera_manager)}, is_running={getattr(self.camera_manager, '_capture_running', 'unknown')}, is_initialized={getattr(self.camera_manager, '_camera_initialized', 'unknown')}")
+                else:
+                    self.logger.warning("Camera manager not found in Flask app context")
+                    self.camera_manager = None
+            except RuntimeError:
+                # Flask コンテキスト外（テスト環境など）
+                self.logger.info("Flask context not available, trying direct import...")
+                try:
+                    from modules.detect_3d.camera.camera_manager import camera_manager
+                    self.camera_manager = camera_manager
+                    self.logger.info(f"Camera manager obtained by direct import: instance_id={id(camera_manager)}")
+                except ImportError as e:
+                    self.logger.warning(f"Camera manager import failed: {e}")
+                    self.camera_manager = None
             
             # 原点データファイルのパス設定
             module_dir = Path(__file__).parent
@@ -62,6 +73,16 @@ class Detection3DModule(ModuleInterface):
         try:
             self._busy = True
             
+            # カメラが起動しているか確認（フロー実行時の確保）
+            # 通常は initialize() で start() されているはずだが、念のため確認
+            if self.camera_manager and action_type in ['register_origin', 'detect_touch', 'count_pixels', 'capture_pixel_range']:
+                if not getattr(self.camera_manager, '_capture_running', False):
+                    self.logger.info(f"[Flow Action] Camera not running, starting now for action: {action_type}")
+                    try:
+                        self.camera_manager.start()
+                    except Exception as e:
+                        self.logger.warning(f"[Flow Action] Failed to start camera: {e}", exc_info=True)
+            
             if action_type == 'register_origin':
                 return self._register_origin(parameters)
             elif action_type == 'detect_touch':
@@ -85,7 +106,7 @@ class Detection3DModule(ModuleInterface):
     
     def _register_origin(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """原点を登録"""
-        from .camera.depth_image import register_origin_logic
+        from modules.detect_3d.camera.depth_image import register_origin_logic
         
         origin_no = parameters.get('origin_no')
         points = parameters.get('points')
@@ -145,7 +166,7 @@ class Detection3DModule(ModuleInterface):
     
     def _detect_touch(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """タッチ検知（リアルタイム監視）"""
-        from .camera.depth_image import detect_object_pixels_in_area
+        from modules.detect_3d.camera.depth_image import detect_object_pixels_in_area
         
         # カメラマネージャーのチェック
         if not self.camera_manager:
@@ -244,7 +265,7 @@ class Detection3DModule(ModuleInterface):
     
     def _count_pixels(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """ピクセル数をカウント"""
-        from .camera.depth_image import detect_object_pixels_in_area
+        from modules.detect_3d.camera.depth_image import detect_object_pixels_in_area
         
         points = parameters.get('points')
         depth_min = parameters.get('depth_min')
@@ -321,7 +342,7 @@ class Detection3DModule(ModuleInterface):
     
     def _capture_pixel_range(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """5フレーム計測してピクセル範囲を取得"""
-        from .camera.depth_image import detect_object_pixels_in_area
+        from modules.detect_3d.camera.depth_image import detect_object_pixels_in_area
         
         origin_no = parameters.get('origin_no')
         judge_no = parameters.get('judge_no')
@@ -383,13 +404,32 @@ class Detection3DModule(ModuleInterface):
         }
     
     def get_status(self) -> Dict[str, Any]:
-        """モジュールの状態取得"""
+        """
+        モジュールの状態取得
+        
+        注意: カメラが初期化されていない場合でも、モジュールはreadyとみなします。
+        カメラは実行時に必要に応じて初期化されます。
+        """
+        # カメラが利用可能かどうかをチェック（OPENNI_PATHが設定されているか）
+        camera_available = False
+        if self.camera_manager:
+            try:
+                # カメラマネージャーが初期化されているか、または初期化可能かチェック
+                camera_available = (
+                    self.camera_manager._camera_initialized or 
+                    self.camera_manager._openni_path is not None
+                )
+            except Exception:
+                camera_available = False
+        
         return {
-            'ready': self._initialized and self.camera_manager is not None,
+            # モジュールが初期化されていればready（カメラの初期化は実行時に行われる）
+            'ready': self._initialized,
             'busy': self._busy,
             'error': None,
             'details': {
-                'camera_available': self.camera_manager is not None,
+                'camera_available': camera_available,
+                'camera_initialized': self.camera_manager._camera_initialized if self.camera_manager else False,
                 'origin_data_file': str(self.origin_data_file) if self.origin_data_file else None
             }
         }

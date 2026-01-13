@@ -43,7 +43,21 @@ def flow_list():
 @flow_designer_bp.route('/designer')
 @flow_designer_bp.route('/')
 def flow_designer():
-    """フロー設計画面"""
+    """フロー設計画面
+    
+    注意：フロー実行時にdetect_3dモジュールを使用する可能性があるため、
+    ページ進入時にカメラを事前初期化する。
+    """
+    # フロー実行ページ進入時にカメラを初期化（非同期）
+    try:
+        from modules.detect_3d.camera.camera_manager import camera_manager
+        if camera_manager and hasattr(camera_manager, 'start'):
+            # start()は重複呼び出しで自動的にスキップされるため安全
+            camera_manager.start()
+    except Exception as e:
+        # カメラ初期化失敗は無視（カメラなしのシステムの可能性もある）
+        pass
+    
     return render_template('flow_designer.html')
 
 

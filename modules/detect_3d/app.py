@@ -1,15 +1,18 @@
-from flask import Blueprint, render_template, Response, request, jsonify, g
+from flask import Blueprint, render_template, Response, request, jsonify, g, current_app
 from pathlib import Path
+# 重要: camera_managerはcore/app.pyで既に初期化されている
+# ここではFlaskアプリオブジェクトから取得する（同じシングルトンを保証）
+# その後、camera_managerを使用するモジュールをインポート
 from .camera.depth_image import (
     generate_depth,
     register_origin_logic,
     detect_object_pixels_in_area,
 )
 from .camera.RGB_image import generate_rgb
-from .camera.camera_manager import camera_manager
 import json
-import atexit
-import threading
+import logging
+
+logger = logging.getLogger(__name__)
 
 MODULE_DIR = Path(__file__).parent
 DEBUG_DIR = MODULE_DIR / 'debug'
@@ -22,81 +25,46 @@ detection_bp = Blueprint('detection_bp', __name__,
                          template_folder='templates',
                          static_folder='static')
 
-# アクティブなストリームを追跡
-active_streams = {'rgb': 0, 'depth': 0}
-stream_lock = threading.Lock()
-
-# アプリケーション終了時にカメラリソースをクリーンアップ
-@atexit.register
-def cleanup():
-    camera_manager.cleanup()
-
-@detection_bp.before_request
-def before_request():
-    """リクエスト前処理 - カメラリソース初期化"""
-    g.camera_active = True
-
-# teardown_requestは無効化 - ページ遷移時のJavaScript側のクリーンアップで対応
-# @detection_bp.teardown_request
-# def teardown_request(exception=None):
-#     """リクエスト後処理 - 不要なリソース解放"""
-#     pass
+# 注意: ページ遷移時は何もしない（カメラは常駐している）
+# UIイベントと一切同期させない
 
 # 実際のURL: /detection/origin
 @detection_bp.route('/origin')
 def detection_origin():
+    print(f"/origin page")
     return render_template('set_3D_origin.html')
 
 # 実際のURL: /detection/detect
 @detection_bp.route('/detect')
 def detect_3d():
+    print(f"/detect page")
     return render_template('detect_3D.html')
 
 @detection_bp.route('/stream/rgb')
 def stream_rgb():
-    with stream_lock:
-        active_streams['rgb'] += 1
-    try:
-        return Response(generate_rgb(), mimetype='multipart/x-mixed-replace; boundary=frame')
-    finally:
-        with stream_lock:
-            active_streams['rgb'] -= 1
-            # ストリームは常に実行し続ける
+    """
+    RGBストリーム（ページが開かれている間のみ実行）
+    
+    注意: カメラは常駐しているため、単にフレームを取得して配信するだけ。
+    UIイベントと一切同期させない。
+    """
+    return Response(generate_rgb(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @detection_bp.route('/stream/depth')
 def stream_depth():
-    with stream_lock:
-        active_streams['depth'] += 1
-    try:
-        return Response(generate_depth(), mimetype='multipart/x-mixed-replace; boundary=frame')
-    finally:
-        with stream_lock:
-            active_streams['depth'] -= 1
-            # ストリームは常に実行し続ける
+    """
+    深度ストリーム（ページが開かれている間のみ実行）
+    
+    注意: カメラは常駐しているため、単にフレームを取得して配信するだけ。
+    UIイベントと一切同期させない。
+    """
+    # Flask current_app から camera_manager を取得するよう通知
+    logger.debug(f"[stream_depth] Using camera_manager from current_app: instance_id={id(current_app.camera_manager)}")
+    return Response(generate_depth(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@detection_bp.route('/cleanup', methods=['POST'])
-def cleanup_camera():
-    """カメラリソースを明示的にクリーンアップ"""
-    import time
-    try:
-        print("カメラクリーンアップリクエスト受信")
-        
-        with stream_lock:
-            active_streams['rgb'] = 0
-            active_streams['depth'] = 0
-        
-        # カメラのニーズフラグをリセット
-        camera_manager._need_rgb = False
-        camera_manager._need_depth = False
-        
-        # 少し待機してストリームが完全に停止するのを待つ
-        time.sleep(0.3)
-        
-        print("カメラクリーンアップ完了")
-        return jsonify({'success': True, 'message': 'Camera resources cleaned up'})
-    except Exception as e:
-        print(f"カメラクリーンアップエラー: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+# 注意: /cleanupエンドポイントは削除しました
+# ページ遷移時は何もしない（カメラは常駐している）
+# アプリ終了時のみクリーンアップ（core/app.pyのatexitで処理）
 
 
 @detection_bp.route('/register_origin', methods=['POST'])

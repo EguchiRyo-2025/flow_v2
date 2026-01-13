@@ -1,5 +1,37 @@
 // グローバルメニュー管理スクリプト
 
+// カメラリソースのクリーンアップ関数（全ページ共通）
+function cleanupCameraResourcesGlobal() {
+    console.log('グローバルメニュー: カメラクリーンアップ開始');
+    
+    // カメラストリームを使用している可能性がある要素を停止
+    const images = document.querySelectorAll('img[src*="/detection/stream"]');
+    images.forEach(img => {
+        if (img.src) {
+            img.src = '';
+            console.log('グローバルメニュー: カメラストリームを停止しました');
+        }
+    });
+    
+    // インターバルを停止（グローバルなインターバルがあれば）
+    if (window.pixelCountInterval) {
+        clearInterval(window.pixelCountInterval);
+        window.pixelCountInterval = null;
+        console.log('グローバルメニュー: インターバルを停止しました');
+    }
+    
+    // サーバーにクリーンアップを通知（keepalive: trueで確実に送信）
+    try {
+        fetch('/detection/cleanup', {
+            method: 'POST',
+            keepalive: true
+        });
+        console.log('グローバルメニュー: クリーンアップ通知を送信しました');
+    } catch (err) {
+        console.warn('カメラクリーンアップ通知エラー:', err);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // 現在のページに応じてメニューのアクティブ状態を設定
     const currentPath = window.location.pathname;
@@ -22,31 +54,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // 3D画像ページからの遷移時にクリーンアップを確実に実行
+    // すべてのメニューリンクにクリーンアップ処理を追加
     document.querySelectorAll('.dropdown-submenu a').forEach(link => {
         link.addEventListener('click', (e) => {
-            // 3D画像ページからの遷移の場合
-            if (currentPath.includes('/detection/')) {
-                e.preventDefault();
-                const targetUrl = link.getAttribute('href');
-                
-                console.log('3D画像ページから遷移中: クリーンアップ実行');
-                
-                // クリーンアップリクエストを送信
-                fetch('/detection/cleanup', {
-                    method: 'POST',
-                    keepalive: true
-                }).then(() => {
-                    console.log('クリーンアップ完了: 遷移します');
-                    // 少し待機してから遷移
-                    setTimeout(() => {
-                        window.location.href = targetUrl;
-                    }, 100);
-                }).catch(err => {
-                    console.warn('クリーンアップエラー: そのまま遷移します', err);
-                    window.location.href = targetUrl;
-                });
+            // カメラを使用するページ（3D画像、フロー）から他のページへの遷移時はクリーンアップ
+            if (currentPath.includes('/detection/') || currentPath.includes('/flow/')) {
+                console.log('カメラを使用するページから遷移中: クリーンアップを実行');
+                cleanupCameraResourcesGlobal();
             }
         });
     });
+});
+
+// ページ離脱時にもクリーンアップを実行（念のため）
+window.addEventListener('beforeunload', () => {
+    const currentPath = window.location.pathname;
+    if (currentPath.includes('/detection/') || currentPath.includes('/flow/')) {
+        cleanupCameraResourcesGlobal();
+    }
 });

@@ -19,7 +19,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from config import get_config
 from core.module_manager import ModuleManager
 from core.flow_engine import FlowEngine
+# camera_managerを最初にインポートして、シングルトンインスタンスを確実に作成
+# これにより、すべてのBlueprintで同じインスタンスが使われる
+# 注意: ここでインポートすることで、アプリケーション起動時に1回だけ初期化される
+print(f"[core/app.py] camera_managerをインポート開始")
 from modules.detect_3d.camera.camera_manager import camera_manager
+print(f"[core/app.py] camera_managerインポート完了: インスタンスID={id(camera_manager)}")
 
 
 def create_app(config_name='development'):
@@ -58,6 +63,9 @@ def create_app(config_name='development'):
     CORS(app)
     
     # ログ設定
+    # werkzeugのINFOログを抑制（静的ファイルのリクエストなどは不要）
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
+    
     logging.basicConfig(
         level=getattr(logging, app.config['LOG_LEVEL']),
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -71,12 +79,19 @@ def create_app(config_name='development'):
     flow_engine = FlowEngine(module_manager)
     app.flow_engine = flow_engine
     
+    # core/app.py で既に作成されたシングルトン camera_manager を app にアタッチ
+    # （すべてのBlueprintで同じインスタンスを参照するため）
+    app.camera_manager = camera_manager
+    app.logger.info(f"[core/app.py] camera_manager attached to Flask app: instance_id={id(camera_manager)}")
+    
     # モジュール自動検出・読み込み
     if app.config.get('MODULE_AUTO_DISCOVER', True):
         results = module_manager.load_all_modules()
         app.logger.info(f"Module loading results: {results}")
     
     # モジュールのBlueprint登録（統一された構造）
+    # 注意: camera_managerは既にインポート時に初期化されているため、
+    # ここで再度初期化する必要はない（シングルトンパターンにより同じインスタンスが返される）
     MODULES = [
         ('modules.detect_3d.app', 'detection_bp', '/detection'),
         ('modules.mapping.app', 'mapping_bp', '/mapping'),
@@ -89,6 +104,27 @@ def create_app(config_name='development'):
             bp = getattr(module, bp_name)
             app.register_blueprint(bp, url_prefix=url_prefix)
             app.logger.info(f"[OK] Registered blueprint: {bp_name} at {url_prefix}")
+            
+            # detection_bp登録時に、カメラを常駐開始（アプリ起動時に1回だけ）
+            # 注意: UIイベントと一切同期させない。常に動き続ける。
+            # Flaskのリロード機能を考慮して、子プロセス（WERKZEUG_RUN_MAIN='true'）でのみ実行
+            if 'detect_3d' in module_path:
+                # Werkzeug自動リロードの場合、実際のWeb serverは子プロセス（WERKZEUG_RUN_MAIN='true'）で動く
+                # 親プロセスではカメラを起動しない（キャプチャスレッドが子プロセスから見えないため）
+                is_werkzeug_parent = app.config.get('DEBUG') and os.environ.get('WERKZEUG_RUN_MAIN') != 'true'
+                should_start_camera = not app.config.get('TESTING') and not is_werkzeug_parent
+                
+                if should_start_camera:
+                    try:
+                        app.logger.info("[カメラ] アプリ起動時にカメラを常駐開始します")
+                        camera_manager.start()  # 非同期で初期化して常駐開始（重複呼び出しは自動的にスキップされる）
+                        app.logger.info("[カメラ] カメラ常駐開始完了（常に動き続けます）")
+                    except Exception as e:
+                        import traceback
+                        app.logger.warning(f"[カメラ] 常駐開始に失敗しました（後で自動的に再試行されます）: {e}")
+                        app.logger.warning(traceback.format_exc())
+                else:
+                    app.logger.info("[カメラ] リロード親プロセスのため、カメラ常駐開始をスキップします")
         except Exception as e:
             import traceback
             app.logger.error(f"[ERROR] Failed to register {bp_name}: {e}")
@@ -322,6 +358,16 @@ def main():
     # 環境変数から設定を取得
     config_name = os.environ.get('FLASK_ENV', 'development')
     port = int(os.environ.get('PORT', 5000))
+    # アプリケーション終了時にカメラをクリーンアップ
+    import atexit
+    def cleanup_camera():
+        try:
+            print("[アプリ終了] カメラをクリーンアップします")
+            camera_manager.cleanup()
+        except Exception as e:
+            print(f"[アプリ終了] カメラクリーンアップエラー: {e}")
+    atexit.register(cleanup_camera)
+    
     # # --- Crash logging: enable faulthandler and file logging early ---
     # try:
     #     import faulthandler
