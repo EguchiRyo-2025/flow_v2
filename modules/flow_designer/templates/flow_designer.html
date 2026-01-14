@@ -5,7 +5,7 @@
 {% block header %}フロー設計{% endblock %}
 
 {% block head_2col_extra %}
-<link rel="stylesheet" href="/modules/flow_designer/static/css/page.css">
+<link rel="stylesheet" href="{{ url_for('flow_designer_bp.static', filename='css/page.css') }}">
 {% endblock %}
 
 {% block content_left %}

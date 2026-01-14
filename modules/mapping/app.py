@@ -14,7 +14,8 @@ IMAGES_DIR = ASSETS_DIR / 'images'
 # url_prefix='/mapping' で登録されるため、ルートは相対パスで定義
 mapping_bp = Blueprint('mapping_bp', __name__, 
                        template_folder='templates',
-                       static_folder='static')
+                       static_folder='static',
+                       static_url_path='/static/mapping')
 
 # ========================================
 # ★ PostgreSQL移行時に変更する部分 ★

@@ -2,15 +2,25 @@
   "name": "flow_designer",
   "display_name": "フロー設計",
   "version": "1.0.0",
+  "author": "Development Team",
   "description": "ワークフローの設計と実行を管理するモジュール",
   "capabilities": [
     "create_flow",
     "edit_flow",
     "delete_flow",
-    "execute_flow"
+    "execute_flow",
+    "list_flows",
+    "get_flow_status"
   ],
-  "endpoints": {
-    "list": "/flow/list",
-    "designer": "/flow/designer"
-  }
+  "flow_nodes": [],
+  "api_endpoints": [
+    "/flow/list",
+    "/flow/",
+    "/flow/designer",
+    "/flow/api/flows",
+    "/flow/api/flows/<flow_id>",
+    "/flow/api/flows/<flow_id>/execute",
+    "/flow/api/flows/<flow_id>/status",
+    "/flow/api/flows/<flow_id>/stop"
+  ]
 }

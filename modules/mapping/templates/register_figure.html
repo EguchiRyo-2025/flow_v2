@@ -5,8 +5,8 @@
 {% block header %}描画・音{% endblock %}
 
 {% block head_2col_extra %}
-<link rel="stylesheet" href="/modules/mapping/static/css/styles.css">
-<link rel="stylesheet" href="/modules/mapping/static/css/register_figure.css">
+<link rel="stylesheet" href="{{ url_for('mapping_bp.static', filename='css/styles.css') }}">
+<link rel="stylesheet" href="{{ url_for('mapping_bp.static', filename='css/register_figure.css') }}">
 {% endblock %}
 
 {% block content_left %}

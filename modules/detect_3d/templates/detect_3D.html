@@ -5,7 +5,7 @@
 {% block header %}3D検知{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="/modules/detect_3d/static/css/styles.css">
+<link rel="stylesheet" href="{{ url_for('detection_bp.static', filename='css/styles.css') }}">
 {% endblock %}
 
 {% block content %}

@@ -2,8 +2,8 @@
 
 {% block title %}フロー一覧 - Digital Workbench{% endblock %}
 
-{% block head %}
-<link rel="stylesheet" href="/modules/flow_designer/static/css/flow_list.css">
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('flow_designer_bp.static', filename='css/flow_list.css') }}">
 {% endblock %}
 
 {% block content %}

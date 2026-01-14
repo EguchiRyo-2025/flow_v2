@@ -115,14 +115,9 @@ def create_app(config_name='development'):
                 should_start_camera = not app.config.get('TESTING') and not is_werkzeug_parent
                 
                 if should_start_camera:
-                    try:
-                        app.logger.info("[カメラ] アプリ起動時にカメラを常駐開始します")
-                        camera_manager.start()  # 非同期で初期化して常駐開始（重複呼び出しは自動的にスキップされる）
-                        app.logger.info("[カメラ] カメラ常駐開始完了（常に動き続けます）")
-                    except Exception as e:
-                        import traceback
-                        app.logger.warning(f"[カメラ] 常駐開始に失敗しました（後で自動的に再試行されます）: {e}")
-                        app.logger.warning(traceback.format_exc())
+                    # カメラ初期化は detection モジュールの interface.py で行われる
+                    # リクエストが来た際に遅延初期化される
+                    app.logger.info("[カメラ] モジュール registration 完了。初期化は最初のリクエスト時に行われます。")
                 else:
                     app.logger.info("[カメラ] リロード親プロセスのため、カメラ常駐開始をスキップします")
         except Exception as e:
@@ -408,7 +403,7 @@ def main():
     
     # サーバー起動
     app.logger.info(f"Starting Flow Designer on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=app.config['DEBUG'])
+    app.run(host='0.0.0.0', port=port, debug=app.config['DEBUG'], use_reloader=True, threaded=True)
 
 
 if __name__ == '__main__':
