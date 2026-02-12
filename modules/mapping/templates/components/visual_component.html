@@ -109,19 +109,58 @@
                     <div class="form-group">
                         <label for="figure-type">図形タイプ:</label>
                         <select id="figure-type" class="form-control">
-                            <option value="polygon">多角形</option>
                             <option value="rectangle">矩形</option>
+                            <option value="polygon">多角形</option>
                             <option value="circle">円</option>
                             <option value="triangle">三角形</option>
+                            <option value="text">テキスト</option>
                         </select>
                     </div>
                     
-                    <div class="form-row">
-                        <div class="form-group flex-grow">
-                            <label for="figure-color">色:</label>
-                            <input type="color" id="figure-color" class="form-control" value="#007BFF">
+                    <div id="polygon-editor-container" style="display: none;">
+                        <label>多角形の頂点編集:</label>
+                        <div style="background: #f5f5f5; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                            <p style="margin: 0 0 10px 0; font-size: 12px; color: #666;">
+                                ディスプレイウィンドウで右クリックして「頂点を追加」を選択してください
+                            </p>
+                            <div id="polygon-points-display" style="background: white; padding: 8px; border-radius: 3px; font-size: 12px; min-height: 60px; max-height: 120px; overflow-y: auto;">
+                                <span style="color: #999;">頂点: （クリックして追加）</span>
+                            </div>
+                            <textarea id="polygon-points" class="form-control" rows="3" placeholder="頂点座標（JSONフォーマット）" style="font-size: 12px; display: none;"></textarea>
                         </div>
-                        <button class="btn btn-cursor-apply" id="cursor-move">カーソル移動</button>
+                    </div>
+
+                    <div id="text-editor-container" style="display: none;">
+                        <div class="form-group">
+                            <label for="figure-text-content">テキスト内容:</label>
+                            <textarea id="figure-text-content" class="form-control" rows="2" placeholder="表示するテキストを入力してください"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="figure-text-font-size">フォントサイズ:</label>
+                            <input type="number" id="figure-text-font-size" class="form-control" value="16" min="8" max="200" step="2">
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group flex-grow">
+                                <label for="figure-text-color">文字色:</label>
+                                <input type="color" id="figure-text-color" class="form-control" value="#000000">
+                            </div>
+                            <div class="form-group flex-grow">
+                                <label for="figure-text-bg-color">背景色:</label>
+                                <input type="color" id="figure-text-bg-color" class="form-control" value="#FFFFFF">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="figure-color-container">
+                        <div class="form-row">
+                            <div class="form-group flex-grow">
+                                <label for="figure-color">色:</label>
+                                <input type="color" id="figure-color" class="form-control" value="#007BFF">
+                            </div>
+                            <button class="btn btn-cursor-apply" id="cursor-move">カーソル移動</button>
+                        </div>
                     </div>
                 </div>
 

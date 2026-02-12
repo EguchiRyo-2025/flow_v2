@@ -58,7 +58,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS group_elements (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             group_id INTEGER NOT NULL,
-            image_asset_id INTEGER NOT NULL,
+            image_asset_id INTEGER,
             display_target TEXT NOT NULL,
             x_position REAL NOT NULL,
             y_position REAL NOT NULL,
@@ -70,6 +70,11 @@ def init_db():
             blink_on_time REAL DEFAULT 0.5,
             blink_off_time REAL DEFAULT 0.5,
             element_comment TEXT DEFAULT '',
+            polygon_points TEXT,
+            text_content TEXT,
+            text_font_size INTEGER DEFAULT 16,
+            text_color TEXT DEFAULT '#000000',
+            text_bg_color TEXT DEFAULT '#FFFFFF',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
             FOREIGN KEY (image_asset_id) REFERENCES image_assets(id) ON DELETE CASCADE
@@ -111,7 +116,12 @@ def migrate_group_elements(cursor):
         'has_blink_control': "INTEGER DEFAULT 0",
         'blink_on_time': "REAL DEFAULT 0.5",
         'blink_off_time': "REAL DEFAULT 0.5",
-        'element_comment': "TEXT DEFAULT ''"
+        'element_comment': "TEXT DEFAULT ''",
+        'polygon_points': "TEXT",
+        'text_content': "TEXT",
+        'text_font_size': "INTEGER DEFAULT 16",
+        'text_color': "TEXT DEFAULT '#000000'",
+        'text_bg_color': "TEXT DEFAULT '#FFFFFF'"
     }
     
     # 不足しているカラムを追加

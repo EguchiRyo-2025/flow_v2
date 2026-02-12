@@ -104,39 +104,160 @@ let dragStartY = 0;
 let elementStartX = 0;
 let elementStartY = 0;
 
+// 多角形エディタを初期化
+window.polygonEditor = new PolygonInteractiveEditor(canvas);
+
 // 要素をレンダリング
 function renderElements() {
     canvas.innerHTML = '';
     elementCountEl.textContent = elements.length;
     
     elements.forEach(elem => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'preview-image';
-        wrapper.style.left = `${elem.x_position}px`;
-        wrapper.style.top = `${elem.y_position}px`;
-        wrapper.setAttribute('data-element-id', elem.id);
-        
-        const img = document.createElement('img');
-        // file_pathから'assets/'を削除して'/mapping/media/'を追加
-        const imagePath = elem.file_path.replace('assets/', '');
-        img.src = `/mapping/media/${imagePath}`;
-        img.style.width = `${elem.image_width * elem.scale}px`;
-        img.style.height = `${elem.image_height * elem.scale}px`;
-        img.style.transform = `rotate(${elem.rotation || 0}deg)`;
-        img.style.opacity = elem.opacity || 1;
-        img.draggable = false;
-        
-        wrapper.appendChild(img);
-        canvas.appendChild(wrapper);
-        
-        // マウスイベントを設定
-        setupDragAndResize(wrapper, elem);
-        
-        // 点滅制御
-        if (elem.blink_enabled) {
-            blinkElement(wrapper, elem.blink_on_time, elem.blink_off_time);
+        if (elem.element_type === 'polygon') {
+            renderPolygonElement(elem);
+        } else if (elem.element_type === 'text') {
+            renderTextElement(elem);
+        } else {
+            // デフォルト：画像要素
+            renderImageElement(elem);
         }
     });
+}
+
+/**
+ * 画像要素をレンダリング
+ */
+function renderImageElement(elem) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'preview-image';
+    wrapper.style.left = `${elem.x_position}px`;
+    wrapper.style.top = `${elem.y_position}px`;
+    wrapper.setAttribute('data-element-id', elem.id);
+    
+    const img = document.createElement('img');
+    // file_pathから'assets/'を削除して'/mapping/media/'を追加
+    const imagePath = elem.file_path.replace('assets/', '');
+    img.src = `/mapping/media/${imagePath}`;
+    img.style.width = `${elem.image_width * elem.scale}px`;
+    img.style.height = `${elem.image_height * elem.scale}px`;
+    img.style.transform = `rotate(${elem.rotation || 0}deg)`;
+    img.style.opacity = elem.opacity || 1;
+    img.draggable = false;
+    
+    wrapper.appendChild(img);
+    canvas.appendChild(wrapper);
+    
+    // マウスイベントを設定
+    setupDragAndResize(wrapper, elem);
+    
+    // 点滅制御
+    if (elem.blink_enabled) {
+        blinkElement(wrapper, elem.blink_on_time, elem.blink_off_time);
+    }
+}
+
+/**
+ * 多角形要素をレンダリング
+ */
+function renderPolygonElement(elem) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'preview-image';
+    wrapper.style.left = `${elem.x_position}px`;
+    wrapper.style.top = `${elem.y_position}px`;
+    wrapper.setAttribute('data-element-id', elem.id);
+    wrapper.style.cursor = 'move';
+    wrapper.style.position = 'absolute';
+    
+    if (!elem.polygon_points) {
+        console.warn('多角形の座標データがありません:', elem.id);
+        return;
+    }
+    
+    try {
+        const points = JSON.parse(elem.polygon_points);
+        
+        // SVGを作成
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '400');
+        svg.setAttribute('height', '300');
+        svg.style.overflow = 'visible';
+        svg.style.opacity = elem.opacity || 1;
+        svg.style.transform = `scale(${elem.scale || 1})`;
+        svg.setAttribute('data-element-id', elem.id);
+        
+        // 多角形を描画
+        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        const pointsStr = points.map(p => `${p[0]},${p[1]}`).join(' ');
+        polygon.setAttribute('points', pointsStr);
+        polygon.setAttribute('fill', elem.element_comment || '#007BFF');
+        polygon.setAttribute('fill-opacity', '0.6');
+        polygon.setAttribute('stroke', elem.element_comment || '#007BFF');
+        polygon.setAttribute('stroke-width', '2');
+        polygon.style.pointerEvents = 'none';
+        
+        svg.appendChild(polygon);
+
+        // 制御点を描画
+        points.forEach((point, index) => {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', point[0]);
+            circle.setAttribute('cy', point[1]);
+            circle.setAttribute('r', '5');
+            circle.setAttribute('fill', 'white');
+            circle.setAttribute('stroke', elem.element_comment || '#007BFF');
+            circle.setAttribute('stroke-width', '2');
+            circle.style.cursor = 'grab';
+            circle.style.pointerEvents = 'auto';
+            
+            // ドラッグ開始
+            circle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                if (window.polygonEditor) {
+                    window.polygonEditor.setControlPointDrag(index);
+                    window.polygonEditor.draggedElement = elem;
+                }
+            });
+
+            svg.appendChild(circle);
+        });
+        
+        wrapper.appendChild(svg);
+    } catch (error) {
+        console.error('多角形描画エラー:', error);
+    }
+    
+    canvas.appendChild(wrapper);
+    setupDragAndResize(wrapper, elem);
+}
+
+/**
+ * テキスト要素をレンダリング
+ */
+function renderTextElement(elem) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'preview-image';
+    wrapper.style.left = `${elem.x_position}px`;
+    wrapper.style.top = `${elem.y_position}px`;
+    wrapper.setAttribute('data-element-id', elem.id);
+    wrapper.style.cursor = 'move';
+    wrapper.style.padding = '5px 10px';
+    wrapper.style.backgroundColor = elem.text_bg_color || '#FFFFFF';
+    wrapper.style.borderRadius = '4px';
+    wrapper.style.opacity = elem.opacity || 1;
+    
+    const textEl = document.createElement('div');
+    textEl.textContent = elem.text_content || '';
+    textEl.style.color = elem.text_color || '#000000';
+    textEl.style.fontSize = `${elem.text_font_size || 16}px`;
+    textEl.style.fontWeight = 'normal';
+    textEl.style.whiteSpace = 'nowrap';
+    textEl.style.userSelect = 'none';
+    textEl.draggable = false;
+    
+    wrapper.appendChild(textEl);
+    canvas.appendChild(wrapper);
+    
+    setupDragAndResize(wrapper, elem);
 }
 
 // ドラッグ&リサイズの設定

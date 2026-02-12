@@ -176,9 +176,10 @@ def upload_image():
 # ========================================
 @mapping_bp.route('/api/group_elements', methods=['POST'])
 def add_group_element():
-    """グループに画像要素を追加"""
+    """グループに要素を追加（画像、多角形、テキスト対応）"""
     
     data = request.json
+    element_type = data.get('element_type', 'image')
     
     try:
         conn = get_db_connection()
@@ -195,13 +196,14 @@ def add_group_element():
                 display_target, x_position, y_position,
                 scale, rotation, opacity,
                 has_blink_control, blink_on_time, blink_off_time,
-                element_comment
+                element_comment, polygon_points, text_content,
+                text_font_size, text_color
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             data.get('group_id'),
-            'image',
-            data.get('image_asset_id'),
+            element_type,
+            data.get('image_asset_id') if element_type == 'image' else None,
             data.get('display_target', ''),
             x_pos,
             y_pos,
@@ -211,7 +213,11 @@ def add_group_element():
             data.get('has_blink_control', False),
             data.get('blink_on_time', 0.5),
             data.get('blink_off_time', 0.5),
-            data.get('element_comment', '')
+            data.get('element_comment', ''),
+            data.get('polygon_points') if element_type == 'polygon' else None,
+            data.get('text_content') if element_type == 'text' else None,
+            data.get('text_font_size', 16) if element_type == 'text' else 16,
+            data.get('text_color', '#000000') if element_type == 'text' else '#000000'
         ))
         
         element_id = cursor.lastrowid
@@ -222,6 +228,7 @@ def add_group_element():
         return jsonify({
             'id': element_id,
             'group_id': data.get('group_id'),
+            'element_type': element_type,
             'x': x_pos,
             'y': y_pos
         }), 200
@@ -359,6 +366,45 @@ def delete_group(group_id):
 # ========================================
 # グループ要素管理API
 # ========================================
+@mapping_bp.route('/api/groups/<int:group_id>/elements/list', methods=['GET'])
+def get_group_elements_list(group_id):
+    """グループの全要素一覧を取得（テーブル表示用）"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 要素テーブル表示用：全要素を取得
+        cursor.execute("""
+            SELECT 
+                ge.id,
+                ge.element_type,
+                ge.element_comment,
+                ge.x_position,
+                ge.y_position,
+                ge.scale,
+                ge.rotation,
+                ge.opacity,
+                COALESCE(ia.file_path, '') as image_path,
+                ge.polygon_points,
+                ge.text_content,
+                ge.created_at
+            FROM group_elements ge
+            LEFT JOIN image_assets ia ON ge.image_asset_id = ia.id
+            WHERE ge.group_id = ?
+            ORDER BY ge.id
+        """, (group_id,))
+        
+        rows = cursor.fetchall()
+        elements = [dict(row) for row in rows]
+        
+        conn.close()
+        
+        return jsonify(elements), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @mapping_bp.route('/api/groups/<int:group_id>/elements', methods=['GET'])
 def get_group_elements(group_id):
     """グループの要素一覧を取得"""
@@ -405,7 +451,7 @@ def get_group_elements(group_id):
 
 @mapping_bp.route('/api/elements/<int:element_id>', methods=['PUT'])
 def update_element(element_id):
-    """要素の位置・サイズ・表示先・コメントを更新"""
+    """要素の位置・サイズ・表示先・コメント・多角形・テキストを更新"""
     data = request.json
     
     try:
@@ -429,12 +475,30 @@ def update_element(element_id):
         if 'rotation' in data:
             update_fields.append('rotation = ?')
             values.append(data['rotation'])
+        if 'opacity' in data:
+            update_fields.append('opacity = ?')
+            values.append(data['opacity'])
         if 'display_target' in data:
             update_fields.append('display_target = ?')
             values.append(data['display_target'])
         if 'element_comment' in data:
             update_fields.append('element_comment = ?')
             values.append(data['element_comment'])
+        if 'polygon_points' in data:
+            update_fields.append('polygon_points = ?')
+            values.append(data['polygon_points'])
+        if 'text_content' in data:
+            update_fields.append('text_content = ?')
+            values.append(data['text_content'])
+        if 'text_font_size' in data:
+            update_fields.append('text_font_size = ?')
+            values.append(data['text_font_size'])
+        if 'text_color' in data:
+            update_fields.append('text_color = ?')
+            values.append(data['text_color'])
+        if 'text_bg_color' in data:
+            update_fields.append('text_bg_color = ?')
+            values.append(data['text_bg_color'])
         
         if not update_fields:
             return jsonify({'error': '更新するフィールドがありません'}), 400
