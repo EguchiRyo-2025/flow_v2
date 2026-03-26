@@ -3,15 +3,7 @@
 {# 3カラムレイアウト専用のCSSをhead_extraブロックで読み込む #}
 {% block head_extra %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/common/layout.css') }}">
-
-  {# main#scrollable-areaのスタイルを上書き #}
-  <style>
-    main#scrollable-area {
-      padding: 0;
-      display: flex;
-      overflow: hidden;
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base_3col.css') }}">
   
   {# 子テンプレートがさらにCSSを追加するためのブロック #}
   {% block head_3col_extra %}{% endblock %}

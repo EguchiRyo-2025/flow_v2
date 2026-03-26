@@ -5,11 +5,13 @@ import uuid
 from PIL import Image
 import pyautogui
 from screeninfo import get_monitors
+import json
 
 MODULE_DIR = Path(__file__).parent
 TEMPLATES_DIR = MODULE_DIR / 'templates'
 ASSETS_DIR = MODULE_DIR / 'assets'
 IMAGES_DIR = ASSETS_DIR / 'images'
+CONFIG_DIR = Path(__file__).parent.parent.parent / 'config'  # プロジェクトのconfig/ディレクトリ
 
 # url_prefix='/mapping' で登録されるため、ルートは相対パスで定義
 mapping_bp = Blueprint('mapping_bp', __name__, 
@@ -31,6 +33,34 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 
 
+def load_projector_config():
+    """プロジェクタ設定を読み込む"""
+    config_file = CONFIG_DIR / 'projector_config.json'
+    try:
+        if config_file.exists():
+            with open(config_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"Warning: Failed to load projector config: {e}")
+    
+    # デフォルト設定を返す
+    return {
+        'projector_displays': {
+            'monitor': {'resolution': {'width': 1920, 'height': 1080}},
+            'parts': {'resolution': {'width': 1920, 'height': 1200}},
+            'workbench': {'resolution': {'width': 1920, 'height': 1200}}
+        },
+        'coordinate_system': {
+            'origin': 'top_left',
+            'handedness': 'left',
+            'units': 'pixels'
+        }
+    }
+
+
+PROJECTOR_CONFIG = load_projector_config()
+
+
 def get_db_connection():
     """データベース接続を取得"""
     # ========================================
@@ -50,6 +80,14 @@ def get_db_connection():
 def allowed_file(filename):
     """許可されたファイル形式かチェック"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def get_projector_resolution(display_target):
+    """指定されたdisplay_targetのプロジェクタ解像度を取得"""
+    displays = PROJECTOR_CONFIG.get('projector_displays', {})
+    display = displays.get(display_target, {})
+    resolution = display.get('resolution', {'width': 1920, 'height': 1200})
+    return resolution
 
 
 # 実際のURL: /mapping/register
@@ -176,7 +214,7 @@ def upload_image():
 # ========================================
 @mapping_bp.route('/api/group_elements', methods=['POST'])
 def add_group_element():
-    """グループに要素を追加（画像、多角形、テキスト対応）"""
+    """グループに要素を追加（画像、多角形、矩形、テキスト対応）"""
     
     data = request.json
     element_type = data.get('element_type', 'image')
@@ -189,6 +227,13 @@ def add_group_element():
         x_pos = data.get('x', data.get('x_position', 0))
         y_pos = data.get('y', data.get('y_position', 0))
         
+        # shape_dataをJSONとしてシリアライズ
+        shape_data = None
+        if element_type in ['polygon', 'rectangle', 'arrow']:
+            shape_data_dict = data.get('shape_data', {})
+            import json as json_module
+            shape_data = json_module.dumps(shape_data_dict) if shape_data_dict else None
+        
         # グループ要素を追加
         cursor.execute("""
             INSERT INTO group_elements (
@@ -197,9 +242,10 @@ def add_group_element():
                 scale, rotation, opacity,
                 has_blink_control, blink_on_time, blink_off_time,
                 element_comment, polygon_points, text_content,
-                text_font_size, text_color
+                text_font_size, text_color, text_bg_color,
+                shape_type, shape_data, stroke_color, fill_color, stroke_width
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             data.get('group_id'),
             element_type,
@@ -217,7 +263,13 @@ def add_group_element():
             data.get('polygon_points') if element_type == 'polygon' else None,
             data.get('text_content') if element_type == 'text' else None,
             data.get('text_font_size', 16) if element_type == 'text' else 16,
-            data.get('text_color', '#000000') if element_type == 'text' else '#000000'
+            data.get('text_color', '#000000') if element_type == 'text' else '#000000',
+            data.get('text_bg_color', '#FFFFFF') if element_type == 'text' else '#FFFFFF',
+            data.get('shape_type') if element_type in ['polygon', 'rectangle', 'arrow'] else None,
+            shape_data,
+            data.get('stroke_color', '#000000') if element_type in ['polygon', 'rectangle', 'arrow'] else None,
+            data.get('fill_color', '#FFFFFF') if element_type in ['polygon', 'rectangle', 'arrow'] else None,
+            data.get('stroke_width', 2) if element_type in ['polygon', 'rectangle', 'arrow'] else None
         ))
         
         element_id = cursor.lastrowid
@@ -230,10 +282,13 @@ def add_group_element():
             'group_id': data.get('group_id'),
             'element_type': element_type,
             'x': x_pos,
-            'y': y_pos
+            'y': y_pos,
+            'shape_type': data.get('shape_type') if element_type in ['polygon', 'rectangle', 'arrow'] else None
         }), 200
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -499,6 +554,23 @@ def update_element(element_id):
         if 'text_bg_color' in data:
             update_fields.append('text_bg_color = ?')
             values.append(data['text_bg_color'])
+        if 'shape_type' in data:
+            update_fields.append('shape_type = ?')
+            values.append(data['shape_type'])
+        if 'shape_data' in data:
+            import json as json_module
+            shape_data = json_module.dumps(data['shape_data']) if isinstance(data['shape_data'], dict) else data['shape_data']
+            update_fields.append('shape_data = ?')
+            values.append(shape_data)
+        if 'stroke_color' in data:
+            update_fields.append('stroke_color = ?')
+            values.append(data['stroke_color'])
+        if 'fill_color' in data:
+            update_fields.append('fill_color = ?')
+            values.append(data['fill_color'])
+        if 'stroke_width' in data:
+            update_fields.append('stroke_width = ?')
+            values.append(data['stroke_width'])
         
         if not update_fields:
             return jsonify({'error': '更新するフィールドがありません'}), 400

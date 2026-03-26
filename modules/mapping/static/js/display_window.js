@@ -31,6 +31,9 @@ class DisplayWindow {
         this.lastFetchInfo = null;
         this.lastFetchError = null;
         
+        // 図形描画モード
+        this.shapeDrawer = null;
+        
         this.init();
     }
     
@@ -39,6 +42,12 @@ class DisplayWindow {
         
         // イベントリスナーを設定
         this.setupEventListeners();
+        
+        // 図形描画モードを初期化
+        if (typeof ShapeDrawingMode !== 'undefined') {
+            this.shapeDrawer = new ShapeDrawingMode(this);
+            console.log('ShapeDrawingMode initialized');
+        }
         
         // 初期状態を同期
         this.syncSelectionState();
@@ -618,6 +627,13 @@ class DisplayWindow {
 
         // 既存の要素をクリア
         this.canvas.innerHTML = '';
+        
+        // SVGレイヤーも再作成
+        const svgLayer = document.getElementById('svg-layer');
+        if (svgLayer) {
+            svgLayer.innerHTML = '';
+        }
+        
         this.selectedElement = null;
 
         const elementsToRender = this.elements;
@@ -635,6 +651,11 @@ class DisplayWindow {
                 // プレビューが現在のdisplay_targetに一致するか確認
                 if (previewElement.display_target === this.displayTarget) {
                     console.log('一時プレビューを表示:', previewElement);
+                    
+                    // シェイププレビューの場合はSVGで描画
+                    if (previewElement.type === 'shape' && previewElement.shape_data) {
+                        this.renderShapePreview(previewElement);
+                    }
                 } else {
                     previewElement = null;
                 }
@@ -1029,6 +1050,201 @@ class DisplayWindow {
             console.warn('[Display] Failed to fetch flow execution signal:', error);
             return null;
         }
+    }
+
+    /**
+     * シェイププレビューをSVGで描画
+     */
+    renderShapePreview(previewData) {
+        const svgLayer = document.getElementById('svg-layer');
+        if (!svgLayer) return;
+
+        const shapeData = previewData.shape_data;
+        if (!shapeData) return;
+
+        const strokeColor = previewData.stroke_color || '#000000';
+        const fillColor = previewData.fill_color || '#FFFFFF';
+        const strokeWidth = previewData.stroke_width || 2;
+
+        console.log('[RenderShapePreview] シェイプ描画:', shapeData);
+
+        if (shapeData.type === 'rectangle') {
+            const [x, y] = shapeData.top_left;
+            const { width, height } = shapeData;
+
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', x);
+            rect.setAttribute('y', y);
+            rect.setAttribute('width', width);
+            rect.setAttribute('height', height);
+            rect.setAttribute('stroke', strokeColor);
+            rect.setAttribute('stroke-width', strokeWidth);
+            rect.setAttribute('fill', fillColor);
+            rect.setAttribute('opacity', '0.7');
+            rect.setAttribute('class', 'shape-preview');
+
+            svgLayer.appendChild(rect);
+
+            // 制御ハンドルを追加
+            this.addShapeControlHandles(svgLayer, shapeData, 'rectangle', previewData);
+
+        } else if (shapeData.type === 'polygon') {
+            const pointsStr = shapeData.points.map(p => `${p[0]},${p[1]}`).join(' ');
+
+            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            polygon.setAttribute('points', pointsStr);
+            polygon.setAttribute('stroke', strokeColor);
+            polygon.setAttribute('stroke-width', strokeWidth);
+            polygon.setAttribute('fill', fillColor);
+            polygon.setAttribute('opacity', '0.7');
+            polygon.setAttribute('class', 'shape-preview');
+
+            svgLayer.appendChild(polygon);
+
+            // 制御点を追加
+            shapeData.points.forEach((point, index) => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', point[0]);
+                circle.setAttribute('cy', point[1]);
+                circle.setAttribute('r', '5');
+                circle.setAttribute('fill', strokeColor);
+                circle.setAttribute('class', 'control-point');
+                circle.setAttribute('data-index', index);
+                circle.style.cursor = 'move';
+
+                // ドラッグ可能に
+                circle.addEventListener('mousedown', (e) => {
+                    this.startPolygonPointDrag(e, index, shapeData, previewData);
+                });
+
+                svgLayer.appendChild(circle);
+            });
+
+            // 右クリックで頂点追加
+            svgLayer.addEventListener('contextmenu', (e) => {
+                if (previewData.shapeType === 'polygon') {
+                    e.preventDefault();
+                    this.addPolygonPoint(e, shapeData, previewData);
+                }
+            });
+
+        } else if (shapeData.type === 'circle') {
+            const [cx, cy] = shapeData.center;
+            const { radius } = shapeData;
+
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', cx);
+            circle.setAttribute('cy', cy);
+            circle.setAttribute('r', radius);
+            circle.setAttribute('stroke', strokeColor);
+            circle.setAttribute('stroke-width', strokeWidth);
+            circle.setAttribute('fill', fillColor);
+            circle.setAttribute('opacity', '0.7');
+            circle.setAttribute('class', 'shape-preview');
+
+            svgLayer.appendChild(circle);
+        } else if (shapeData.type === 'triangle') {
+            const pointsStr = shapeData.points.map(p => `${p[0]},${p[1]}`).join(' ');
+
+            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            polygon.setAttribute('points', pointsStr);
+            polygon.setAttribute('stroke', strokeColor);
+            polygon.setAttribute('stroke-width', strokeWidth);
+            polygon.setAttribute('fill', fillColor);
+            polygon.setAttribute('opacity', '0.7');
+            polygon.setAttribute('class', 'shape-preview');
+
+            svgLayer.appendChild(polygon);
+        }
+    }
+
+    /**
+     * 図形の制御ハンドルを追加
+     */
+    addShapeControlHandles(svgLayer, shapeData, shapeType, previewData) {
+        if (shapeType === 'rectangle') {
+            const [x, y] = shapeData.top_left;
+            const { width, height } = shapeData;
+
+            // 4隅のハンドル
+            const corners = [
+                { x: x, y: y, corner: 'nw' },
+                { x: x + width, y: y, corner: 'ne' },
+                { x: x + width, y: y + height, corner: 'se' },
+                { x: x, y: y + height, corner: 'sw' }
+            ];
+
+            corners.forEach(({ x: hx, y: hy, corner }) => {
+                const handle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                handle.setAttribute('x', hx - 5);
+                handle.setAttribute('y', hy - 5);
+                handle.setAttribute('width', '10');
+                handle.setAttribute('height', '10');
+                handle.setAttribute('fill', '#007BFF');
+                handle.setAttribute('stroke', '#FFFFFF');
+                handle.setAttribute('stroke-width', '1');
+                handle.setAttribute('class', 'control-handle');
+                handle.setAttribute('data-corner', corner);
+                handle.style.cursor = 'pointer';
+
+                svgLayer.appendChild(handle);
+            });
+        }
+    }
+
+    /**
+     * 多角形の頂点ドラッグ開始
+     */
+    startPolygonPointDrag(e, index, shapeData, previewData) {
+        const svgLayer = document.getElementById('svg-layer');
+        const rect = svgLayer.getBoundingClientRect();
+        const startX = e.clientX - rect.left;
+        const startY = e.clientY - rect.top;
+
+        const handleMouseMove = (moveEvent) => {
+            const x = moveEvent.clientX - rect.left;
+            const y = moveEvent.clientY - rect.top;
+
+            shapeData.points[index] = [x, y];
+            previewData.shape_data = shapeData;
+
+            localStorage.setItem('previewElement', JSON.stringify(previewData));
+            localStorage.setItem(MAPPING_SYNC_KEY, Date.now().toString());
+
+            // 再描画
+            this.renderShapePreview(previewData);
+        };
+
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    /**
+     * 多角形に頂点を追加
+     */
+    addPolygonPoint(e, shapeData, previewData) {
+        e.preventDefault();
+
+        const svgLayer = document.getElementById('svg-layer');
+        const rect = svgLayer.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        shapeData.points.push([x, y]);
+        previewData.shape_data = shapeData;
+
+        localStorage.setItem('previewElement', JSON.stringify(previewData));
+        localStorage.setItem(MAPPING_SYNC_KEY, Date.now().toString());
+
+        console.log('[AddPolygonPoint] 頂点追加:', [x, y], '新しい頂点数:', shapeData.points.length);
+
+        // 再描画
+        this.renderShapePreview(previewData);
     }
 }
 

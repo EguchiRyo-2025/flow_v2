@@ -247,11 +247,40 @@ class WindowManager {
         // カーソル移動ボタン
         const cursorMoveBtn = document.getElementById('cursor-move');
         if (cursorMoveBtn) {
-            cursorMoveBtn.addEventListener('click', () => {
+            cursorMoveBtn.addEventListener('click', async () => {
                 const xPos = parseInt(xValueInput?.value) || 0;
                 const yPos = parseInt(yValueInput?.value) || 0;
-                console.log(`カーソル移動: X=${xPos}, Y=${yPos}`);
-                // TODO: カーソル移動の実装
+                
+                // 表示先を取得（デフォルトは'monitor'）
+                const displayTargetSelect = document.getElementById('dest');
+                const displayTarget = displayTargetSelect ? displayTargetSelect.value : 'monitor';
+                
+                console.log(`図形のカーソル移動: X=${xPos}, Y=${yPos}, displayTarget=${displayTarget}`);
+                
+                try {
+                    const response = await fetch('/mapping/api/move_cursor', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            x: xPos,
+                            y: yPos,
+                            display_target: displayTarget
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('カーソル移動成功:', result);
+                        alert(`カーソルを移動しました (${xPos}, ${yPos})`);
+                    } else {
+                        const error = await response.json();
+                        console.error('カーソル移動エラー:', error);
+                        alert('カーソルの移動に失敗しました: ' + error.error);
+                    }
+                } catch (error) {
+                    console.error('カーソル移動リクエストエラー:', error);
+                    alert('カーソルの移動に失敗しました');
+                }
             });
         }
 
@@ -429,6 +458,159 @@ class WindowManager {
                 console.log('点滅制御:', isBlinkEnabled ? 'ON' : 'OFF');
             });
         }
+
+        // 図形タイプセレクトボックスの change イベント
+        const figureTypeSelect = document.getElementById('figure-type');
+        if (figureTypeSelect) {
+            figureTypeSelect.addEventListener('change', (e) => {
+                const figureType = e.target.value;
+                const displayTargetSelect = document.getElementById('dest');
+                const displayTarget = displayTargetSelect ? displayTargetSelect.value : 'parts';
+                
+                // プレビューデータを生成（デフォルト矩形）
+                const previewData = createShapePreview(figureType, displayTarget);
+                
+                // localStorage に保存
+                localStorage.setItem('previewElement', JSON.stringify(previewData));
+                localStorage.setItem(MAPPING_SYNC_KEY, Date.now().toString());
+                
+                console.log('[Shape Preview] プレビュー生成:', previewData);
+            });
+        }
+
+        // プレビューデータを生成する関数
+        function createShapePreview(shapeType, displayTarget) {
+            // ディスプレイの解像度を取得
+            let displayWidth = 1920, displayHeight = 1200;
+            if (displayTarget === 'monitor') {
+                displayWidth = 1920;
+                displayHeight = 1080;
+            }
+            
+            // 矩形のデフォルトサイズ
+            const defaultWidth = 200;
+            const defaultHeight = 150;
+            
+            // 中央に配置
+            const centerX = Math.floor((displayWidth - defaultWidth) / 2);
+            const centerY = Math.floor((displayHeight - defaultHeight) / 2);
+            
+            let shapeData = {};
+            if (shapeType === 'rectangle') {
+                shapeData = {
+                    type: 'rectangle',
+                    top_left: [centerX, centerY],
+                    width: defaultWidth,
+                    height: defaultHeight
+                };
+            } else if (shapeType === 'polygon') {
+                // 多角形: 初期は四角形
+                shapeData = {
+                    type: 'polygon',
+                    points: [
+                        [centerX, centerY],
+                        [centerX + defaultWidth, centerY],
+                        [centerX + defaultWidth, centerY + defaultHeight],
+                        [centerX, centerY + defaultHeight]
+                    ]
+                };
+            } else if (shapeType === 'circle') {
+                shapeData = {
+                    type: 'circle',
+                    center: [centerX + defaultWidth/2, centerY + defaultHeight/2],
+                    radius: defaultWidth / 2
+                };
+            } else if (shapeType === 'triangle') {
+                shapeData = {
+                    type: 'triangle',
+                    points: [
+                        [centerX + defaultWidth/2, centerY],
+                        [centerX + defaultWidth, centerY + defaultHeight],
+                        [centerX, centerY + defaultHeight]
+                    ]
+                };
+            }
+            
+            return {
+                type: 'shape',
+                shapeType: shapeType,
+                shape_data: shapeData,
+                x: centerX,
+                y: centerY,
+                display_target: displayTarget,
+                stroke_color: '#000000',
+                fill_color: '#FFFFFF',
+                stroke_width: 2,
+                isPreview: true
+            };
+        }
+
+        // 座標移動ボタンのイベント（プレビュー更新用）
+        const bulkXMinusBtn = document.getElementById('bulk-x-minus');
+        const bulkXPlusBtn = document.getElementById('bulk-x-plus');
+        const bulkYMinusBtn = document.getElementById('bulk-y-minus');
+        const bulkYPlusBtn = document.getElementById('bulk-y-plus');
+        const bulkXValue = document.getElementById('bulk-x-value');
+        const bulkYValue = document.getElementById('bulk-y-value');
+
+        function updateShapePreview() {
+            const previewData = localStorage.getItem('previewElement');
+            if (!previewData) return;
+
+            try {
+                const preview = JSON.parse(previewData);
+                if (preview.type !== 'shape') return;
+
+                const offsetX = parseInt(bulkXValue?.value || 0);
+                const offsetY = parseInt(bulkYValue?.value || 0);
+
+                // shape_data の座標を更新
+                if (preview.shape_data.type === 'rectangle') {
+                    const [x, y] = preview.shape_data.top_left;
+                    preview.shape_data.top_left = [x + offsetX, y + offsetY];
+                } else if (preview.shape_data.type === 'polygon') {
+                    preview.shape_data.points = preview.shape_data.points.map(p => [p[0] + offsetX, p[1] + offsetY]);
+                } else if (preview.shape_data.type === 'circle') {
+                    const [cx, cy] = preview.shape_data.center;
+                    preview.shape_data.center = [cx + offsetX, cy + offsetY];
+                }
+
+                preview.x += offsetX;
+                preview.y += offsetY;
+
+                localStorage.setItem('previewElement', JSON.stringify(preview));
+                localStorage.setItem(MAPPING_SYNC_KEY, Date.now().toString());
+
+                console.log('[Shape Update] プレビュー座標更新:', offsetX, offsetY);
+            } catch (e) {
+                console.error('プレビュー更新エラー:', e);
+            }
+        }
+
+        if (bulkXMinusBtn) bulkXMinusBtn.addEventListener('click', () => {
+            const val = parseInt(bulkXValue.value) || 0;
+            bulkXValue.value = val - 10;
+            updateShapePreview();
+        });
+
+        if (bulkXPlusBtn) bulkXPlusBtn.addEventListener('click', () => {
+            const val = parseInt(bulkXValue.value) || 0;
+            bulkXValue.value = val + 10;
+            updateShapePreview();
+        });
+
+        if (bulkYMinusBtn) bulkYMinusBtn.addEventListener('click', () => {
+            const val = parseInt(bulkYValue.value) || 0;
+            bulkYValue.value = val - 10;
+            updateShapePreview();
+        });
+
+        if (bulkYPlusBtn) bulkYPlusBtn.addEventListener('click', () => {
+            const val = parseInt(bulkYValue.value) || 0;
+            bulkYValue.value = val + 10;
+            updateShapePreview();
+        });
+        
 
         // カーソル移動ボタン（図形用）
         const cursorMoveBtn = document.getElementById('cursor-move');
@@ -947,6 +1129,71 @@ class WindowManager {
                     
                     typeLabel = '図形';
                     content = `${colorBox}${this.getFigureTypeName(figureType)}${blinkEnabled ? ' [点滅]' : ''}`;
+                    
+                    // プレビューデータから座標・図形情報を取得
+                    const previewData = localStorage.getItem('previewElement');
+                    if (!previewData) {
+                        alert('図形がプレビューされていません。図形タイプを選択してください');
+                        return;
+                    }
+
+                    try {
+                        const preview = JSON.parse(previewData);
+                        if (preview.type !== 'shape') {
+                            alert('図形プレビューが無効です');
+                            return;
+                        }
+
+                        console.log('[DB登録開始] 図形要素をgroup_elementsテーブルに保存中...', preview);
+
+                        const requestData = {
+                            group_id: currentGroupId,
+                            element_type: 'shape',
+                            display_target: displayTarget,
+                            x_position: preview.x,
+                            y_position: preview.y,
+                            shape_type: preview.shapeType,
+                            shape_data: preview.shape_data,
+                            stroke_color: preview.stroke_color,
+                            fill_color: preview.fill_color,
+                            stroke_width: preview.stroke_width,
+                            element_comment: comment,
+                            has_blink_control: blinkEnabled,
+                            blink_on_time: parseFloat(document.getElementById('blink-on-time')?.value || 0.5),
+                            blink_off_time: parseFloat(document.getElementById('blink-off-time')?.value || 0.5)
+                        };
+
+                        console.log('[図形登録] リクエストデータ:', requestData);
+
+                        const response = await fetch('/mapping/api/group_elements', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(requestData)
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            console.log('[図形登録成功]:', result);
+                            alert('図形を登録しました');
+
+                            // プレビューをクリア
+                            localStorage.removeItem('previewElement');
+                            localStorage.setItem(MAPPING_SYNC_KEY, Date.now().toString());
+
+                            // 要素テーブルを再読み込み
+                            if (window.elementManager) {
+                                await window.elementManager.loadElements(currentGroupId);
+                            }
+                        } else {
+                            const error = await response.json();
+                            console.error('[図形登録エラー]:', error);
+                            alert('図形の登録に失敗しました: ' + error.error);
+                        }
+                    } catch (error) {
+                        console.error('[図形登録リクエストエラー]:', error);
+                        alert('図形の登録に失敗しました');
+                    }
+                    return;
                 } else {
                     // 画像の場合
                     const imageData = uploadedImageData[currentVisualState];

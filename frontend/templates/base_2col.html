@@ -3,17 +3,7 @@
 {# レイアウト用CSSをhead_extraブロックで読み込む #}
 {% block head_extra %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
-
-  {# main#scrollable-areaのスタイルを上書き #}
-  <style>
-    main#scrollable-area {
-      padding: 0;
-      display: flex;
-      overflow: hidden;
-      margin-top: 60px; /* ヘッダー(30px) + ナビゲーション(30px) */
-      height: calc(100vh - 60px);
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base_2col.css') }}">
   
   {# 子テンプレートがさらにCSSを追加するためのブロック #}
   {% block head_2col_extra %}{% endblock %}

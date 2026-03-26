@@ -1,0 +1,36 @@
+{
+  "projector_displays": {
+    "monitor": {
+      "resolution": {
+        "width": 1920,
+        "height": 1080
+      },
+      "description": "メインモニター（パソコン表示用）"
+    },
+    "parts": {
+      "resolution": {
+        "width": 1920,
+        "height": 1200
+      },
+      "description": "部品棚用プロジェクタ"
+    },
+    "workbench": {
+      "resolution": {
+        "width": 1920,
+        "height": 1200
+      },
+      "description": "作業台用プロジェクタ"
+    }
+  },
+  "coordinate_system": {
+    "origin": "top_left",
+    "handedness": "left",
+    "units": "pixels",
+    "description": "左上を原点とする左手座標系"
+  },
+  "display_targets": [
+    "monitor",
+    "parts",
+    "workbench"
+  ]
+}

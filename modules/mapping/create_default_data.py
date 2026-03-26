@@ -109,7 +109,8 @@ def migrate_group_elements(cursor):
     existing_columns = {row[1] for row in cursor.fetchall()}
     
     # 追加が必要なカラム定義
-    new_columns = {
+    # 既存カラム: image/text/polygon対応
+    basic_columns = {
         'element_type': "TEXT DEFAULT 'image'",
         'rotation': "REAL DEFAULT 0.0",
         'opacity': "REAL DEFAULT 1.0",
@@ -124,8 +125,19 @@ def migrate_group_elements(cursor):
         'text_bg_color': "TEXT DEFAULT '#FFFFFF'"
     }
     
+    # 図形対応の新規カラム
+    shape_columns = {
+        'shape_type': "TEXT",  # 'polygon', 'rectangle', 'arrow', 'text'など
+        'shape_data': "TEXT",  # JSON形式の図形データ
+        'stroke_color': "TEXT DEFAULT '#000000'",
+        'fill_color': "TEXT DEFAULT '#FFFFFF'",
+        'stroke_width': "INTEGER DEFAULT 2"
+    }
+    
+    all_columns = {**basic_columns, **shape_columns}
+    
     # 不足しているカラムを追加
-    for column_name, column_def in new_columns.items():
+    for column_name, column_def in all_columns.items():
         if column_name not in existing_columns:
             try:
                 cursor.execute(f"ALTER TABLE group_elements ADD COLUMN {column_name} {column_def}")

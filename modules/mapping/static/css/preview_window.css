@@ -1,0 +1,69 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #000;
+    overflow: hidden;
+    position: relative;
+}
+
+#preview-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.preview-image {
+    position: absolute;
+    transition: none;
+    cursor: move;
+    user-select: none;
+}
+
+.preview-image:hover {
+    outline: 2px solid #007BFF;
+}
+
+.preview-image.dragging {
+    opacity: 0.7;
+}
+
+.preview-cursor {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid red;
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    display: none;
+}
+
+.info-panel {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px;
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 12px;
+    z-index: 10000;
+}
+
+.info-panel button {
+    margin-top: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.info-panel button:first-of-type {
+    margin-top: 10px;
+}

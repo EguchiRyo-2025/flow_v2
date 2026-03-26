@@ -1,0 +1,7 @@
+main#scrollable-area {
+  padding: 0;
+  display: flex;
+  overflow: hidden;
+  margin-top: 60px; /* ヘッダー(30px) + ナビゲーション(30px) */
+  height: calc(100vh - 60px);
+}

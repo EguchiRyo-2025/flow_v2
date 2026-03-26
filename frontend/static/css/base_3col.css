@@ -1,0 +1,5 @@
+main#scrollable-area {
+  padding: 0;
+  display: flex;
+  overflow: hidden;
+}
