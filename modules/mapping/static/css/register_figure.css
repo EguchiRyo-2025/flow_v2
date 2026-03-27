@@ -1,1 +1,28 @@
 /* register_figure.html specific styles */
+
+.display-window-controls {
+    margin-top: 10px;
+    padding: 10px;
+    border-top: 2px solid #ddd;
+}
+
+.btn-launch-displays {
+    width: 100%;
+    padding: 10px;
+    background-color: #ff6b6b;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-launch-displays:hover {
+    background-color: #ff5252;
+}
+
+.btn-launch-displays:active {
+    background-color: #e84343;
+}

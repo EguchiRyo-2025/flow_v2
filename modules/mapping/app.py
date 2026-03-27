@@ -20,6 +20,17 @@ mapping_bp = Blueprint('mapping_bp', __name__,
                        static_url_path='/static/mapping')
 
 # ========================================
+# DB 初期化・マイグレーション実行
+# ========================================
+try:
+    from .create_default_data import init_db
+    print("[Mapping] DB 初期化と migration を実行中...")
+    init_db()
+    print("[Mapping] DB 初期化完了")
+except Exception as e:
+    print(f"[Mapping] DB 初期化エラー: {e}")
+
+# ========================================
 # ★ PostgreSQL移行時に変更する部分 ★
 # ========================================
 DB_PATH = MODULE_DIR / 'mapping_figure.db'  # SQLite用
@@ -234,6 +245,11 @@ def add_group_element():
             import json as json_module
             shape_data = json_module.dumps(shape_data_dict) if shape_data_dict else None
         
+        # image_asset_id: 画像の場合のみ使用、図形の場合は NULL
+        image_asset_id = None
+        if element_type == 'image':
+            image_asset_id = data.get('image_asset_id')
+        
         # グループ要素を追加
         cursor.execute("""
             INSERT INTO group_elements (
@@ -249,7 +265,7 @@ def add_group_element():
         """, (
             data.get('group_id'),
             element_type,
-            data.get('image_asset_id') if element_type == 'image' else None,
+            image_asset_id,
             data.get('display_target', ''),
             x_pos,
             y_pos,
@@ -288,8 +304,9 @@ def add_group_element():
         
     except Exception as e:
         import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        error_msg = traceback.format_exc()
+        print(f"[API Error] add_group_element エラー:\n{error_msg}")
+        return jsonify({'error': str(e), 'traceback': error_msg}), 500
 
 
 # ========================================
@@ -402,17 +419,40 @@ def update_group(group_id):
 
 @mapping_bp.route('/api/groups/<int:group_id>', methods=['DELETE'])
 def delete_group(group_id):
-    """グループを削除"""
+    """グループを削除してgroup_numberを詰める"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # 削除するグループの project_id を取得
+        cursor.execute("SELECT project_id FROM groups WHERE id = ?", (group_id,))
+        result = cursor.fetchone()
+        if not result:
+            return jsonify({'error': 'グループが見つかりません'}), 404
+        
+        project_id = result[0]
+        
+        # グループを削除
         cursor.execute("DELETE FROM groups WHERE id = ?", (group_id,))
+        
+        # 同じプロジェクトの他のグループの group_number を詰める
+        cursor.execute(
+            "SELECT id, group_number FROM groups WHERE project_id = ? ORDER BY group_number ASC",
+            (project_id,)
+        )
+        groups = cursor.fetchall()
+        
+        # group_number を 1 から順に振り直す
+        for idx, (gid, _) in enumerate(groups, start=1):
+            cursor.execute(
+                "UPDATE groups SET group_number = ? WHERE id = ?",
+                (idx, gid)
+            )
         
         conn.commit()
         conn.close()
         
-        return jsonify({'success': True}), 200
+        return jsonify({'success': True, 'message': 'グループを削除し、番号を詰めました'}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -439,6 +479,10 @@ def get_group_elements_list(group_id):
                 ge.scale,
                 ge.rotation,
                 ge.opacity,
+                ge.display_target,
+                ge.stroke_color,
+                ge.fill_color,
+                ge.stroke_width,
                 COALESCE(ia.file_path, '') as image_path,
                 ge.polygon_points,
                 ge.text_content,
@@ -446,7 +490,7 @@ def get_group_elements_list(group_id):
             FROM group_elements ge
             LEFT JOIN image_assets ia ON ge.image_asset_id = ia.id
             WHERE ge.group_id = ?
-            ORDER BY ge.id
+            ORDER BY ge.display_target, ge.element_type, ge.id
         """, (group_id,))
         
         rows = cursor.fetchall()
@@ -539,6 +583,9 @@ def update_element(element_id):
         if 'element_comment' in data:
             update_fields.append('element_comment = ?')
             values.append(data['element_comment'])
+        if 'element_type' in data:
+            update_fields.append('element_type = ?')
+            values.append(data['element_type'])
         if 'polygon_points' in data:
             update_fields.append('polygon_points = ?')
             values.append(data['polygon_points'])
@@ -730,10 +777,36 @@ def move_cursor():
         return jsonify({'error': str(e)}), 500
 
 
+@mapping_bp.route('/display/monitor')
+def display_monitor():
+    """メイン画面用ディスプレイウィンドウ (1920x1080)"""
+    return render_template('monitor_display.html')
+
+
+@mapping_bp.route('/display/parts')
+def display_parts():
+    """部品棚用ディスプレイウィンドウ (1920x1200)"""
+    return render_template('parts_display.html')
+
+
+@mapping_bp.route('/display/workbench')
+def display_workbench():
+    """作業台用ディスプレイウィンドウ (1920x1200)"""
+    return render_template('workbench_display.html')
+
+
+# 互換性のため旧ルートも残す
 @mapping_bp.route('/display/<display_target>')
 def display_window(display_target):
-    """ディスプレイウィンドウのHTMLを返す"""
-    return render_template('display_window.html', display_target=display_target)
+    """ディスプレイウィンドウのHTMLを返す（互換性用）"""
+    if display_target == 'monitor':
+        return render_template('monitor_display.html')
+    elif display_target == 'parts':
+        return render_template('parts_display.html')
+    elif display_target == 'workbench':
+        return render_template('workbench_display.html')
+    else:
+        return render_template('monitor_display.html')
 
 
 @mapping_bp.route('/api/display/elements/<display_target>')

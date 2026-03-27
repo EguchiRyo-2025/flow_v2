@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>デジタル作業台 - 部品棚</title>
+    <link rel="stylesheet" href="/modules/mapping/static/css/display_window.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="display-label parts">PARTS SHELF</div>
+    <div id="display-canvas">
+        <!-- SVG図形描画用レイヤー -->
+        <svg id="svg-layer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: auto; z-index: 100;"></svg>
+    </div>
+    
+    <div class="info-panel" id="info-panel">
+        <h3>
+            <span class="monitor-badge parts">PARTS SHELF</span>
+        </h3>
+        <div class="info-item">
+            <span class="info-label">モニター:</span>
+            <span class="info-value" id="monitor-name">parts</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">表示中要素:</span>
+            <span class="info-value" id="element-count">0</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">グループID:</span>
+            <span class="info-value" id="current-group">未選択</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">選択中:</span>
+            <span class="info-value" id="selected-element">なし</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">ウィンドウサイズ:</span>
+            <span class="info-value" id="window-size">-</span>
+        </div>
+        <button id="toggle-info-btn">情報パネルを隠す</button>
+        
+        <!-- 投影図形編集用ボタン -->
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+            <button id="save-projected-shape" class="btn btn-success" style="width: 100%; margin-bottom: 5px;">
+                💾 変更を保存
+            </button>
+            <button id="clear-projected-shape" class="btn btn-secondary" style="width: 100%;">
+                🗑️ クリア
+            </button>
+        </div>
+    </div>
+
+    <script>
+        window.DISPLAY_TARGET = 'parts';
+    </script>
+    <script src="/modules/mapping/static/js/display_window_init.js"></script>
+    <script src="/modules/mapping/static/js/shape_drawing.js"></script>
+    <script src="/modules/mapping/static/js/display_window.js"></script>
+</body>
+</html>

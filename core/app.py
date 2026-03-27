@@ -297,55 +297,156 @@ def register_routes(app: Flask):
 def open_display_windows(port, delay=3):
     """
     サーバー起動後にディスプレイウィンドウを自動的に開く
-    各ディスプレイに最大化されたウィンドウを配置
+    Chromeを起動後、Pythonでウィンドウ位置・サイズを制御
     
     Args:
         port: サーバーのポート番号
         delay: サーバー起動を待つ秒数
     """
+    import subprocess
+    import platform
+    
     time.sleep(delay)  # サーバーの起動を待つ
     
     base_url = f"http://localhost:{port}"
     
-    try:
-        from screeninfo import get_monitors
-        monitors = get_monitors()
-        monitor_count = len(monitors)
-        print(f"Detected {monitor_count} monitor(s).")
-        for i, m in enumerate(monitors):
-            print(f"  Monitor {i}: {m.width}x{m.height} at ({m.x}, {m.y})")
-    except Exception as e:
-        monitor_count = 1
-        monitors = []
-        print(f"Failed to inspect monitors ({e}). Using fallback.")
+    # ディスプレイ設定（左から: monitor, parts, workbench）
+    displays = [
+        {
+            'name': 'monitor',
+            'path': '/mapping/register',
+            'x': 0,
+            'y': 0,
+            'width': 1200,
+            'height': 680
+        },
+        {
+            'name': 'parts',
+            'path': '/mapping/display/parts',
+            'x': 1200,
+            'y': 0,
+            'width': 1200,
+            'height': 800
+        },
+        {
+            'name': 'workbench',
+            'path': '/mapping/display/workbench',
+            'x': 2400,
+            'y': 0,
+            'width': 1200,
+            'height': 800
+        }
+    ]
     
-    def launch_with_positioning(label, path, monitor_index=0):
+    def launch_chrome_with_positioning(display_config):
         """
-        特定のモニターにウィンドウを配置して開く
+        Chromeを起動してウィンドウを移動・リサイズ
+        プロセスIDを使ってウィンドウを正確に特定
         """
-        url = f"{base_url}{path}"
-        print(f"Opening {label} window: {url}")
-        webbrowser.open_new(url)
-        time.sleep(0.5)
+        url = f"{base_url}{display_config['path']}"
+        name = display_config['name']
+        target_x = display_config['x']
+        target_y = display_config['y']
+        target_width = display_config['width']
+        target_height = display_config['height']
+        
+        try:
+            if platform.system() == 'Windows':
+                import pygetwindow as gw
+                
+                # Chrome パスを探索（64bit版のみ）
+                chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+                if not os.path.exists(chrome_path):
+                    chrome_path = r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+                
+                if not os.path.exists(chrome_path):
+                    print(f"[{name}] Chromeが見つかりません: {chrome_path}")
+                    return False
+                
+                # Chrome起動（--app モード、新規プロセス）
+                try:
+                    proc = subprocess.Popen([
+                        chrome_path,
+                        f'--app={url}',
+                    ])
+                    pid = proc.pid
+                    print(f"[{name}] Chrome起動: {url} (PID: {pid})")
+                    
+                except Exception as e:
+                    print(f"[{name}] Chrome起動エラー: {e}")
+                    return False
+                
+                # プロセスIDからウィンドウを探す（最大5秒待機）
+                found = False
+                for attempt in range(50):  # 50 * 0.1秒 = 5秒
+                    time.sleep(0.1)
+                    
+                    try:
+                        # すべての可視ウィンドウを列挙
+                        all_windows = gw.getAllWindows()
+                        visible_windows = [w for w in all_windows if w.isVisible]
+                        
+                        for win in visible_windows:
+                            try:
+                                # ウィンドウのプロセスIDを取得
+                                import ctypes
+                                from ctypes import windll
+                                
+                                hwnd = win._handle
+                                win_pid = ctypes.c_ulong()
+                                windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(win_pid))
+                                
+                                # 起動したプロセスのウィンドウを見つけた
+                                if win_pid.value == pid:
+                                    # ウィンドウを移動・リサイズ
+                                    try:
+                                        # 少し待機してからリサイズ
+                                        time.sleep(0.2)
+                                        win.moveTo(target_x, target_y)
+                                        time.sleep(0.1)
+                                        win.resizeTo(target_width, target_height)
+                                        print(f"[{name}] ウィンドウ移動完了: ({target_x}, {target_y}) {target_width}x{target_height}")
+                                        found = True
+                                        return True
+                                    except Exception as e:
+                                        print(f"[{name}] ウィンドウ操作エラー: {e}")
+                                        return False
+                            except:
+                                continue
+                    except Exception as e:
+                        continue
+                
+                if not found:
+                    print(f"[{name}] ウィンドウが見つかりません（タイムアウト）")
+                    return False
+                    
+            else:
+                # Linux/Mac
+                print(f"[{name}] Linux/Mac: 未対応（Windowsのみ対応）")
+                return False
+                
+        except ImportError:
+            print("[エラー] pygetwindowがインストールされていません。")
+            print("  以下のコマンドでインストールしてください:")
+            print("  pip install pygetwindow")
+            return False
+        except Exception as e:
+            print(f"[{name}] 予期しないエラー: {e}")
+            return False
     
     try:
-        # メインウィンドウ（モニター0）
-        launch_with_positioning('main', '/mapping/register', 0)
+        print("=" * 60)
+        print("ディスプレイウィンドウを起動しています...\n")
         
-        # 部品棚ウィンドウ（モニター1、なければモニター0）
-        if monitor_count >= 2:
-            launch_with_positioning('parts', '/mapping/display/parts', 1)
-        else:
-            launch_with_positioning('parts', '/mapping/display/parts', 0)
-        
-        # 作業台ウィンドウ（モニター2、なければモニター0）
-        if monitor_count >= 3:
-            launch_with_positioning('workbench', '/mapping/display/workbench', 2)
-        else:
-            launch_with_positioning('workbench', '/mapping/display/workbench', 0)
+        for display in displays:
+            launch_chrome_with_positioning(display)
+            time.sleep(1)  # 各ウィンドウ起動の間隔
             
+        print("=" * 60)
+        print("全ウィンドウの起動が完了しました。")
+        
     except Exception as e:
-        print(f"Failed to open display windows: {e}")
+        print(f"ディスプレイウィンドウ起動エラー: {e}")
 
 
 def main():

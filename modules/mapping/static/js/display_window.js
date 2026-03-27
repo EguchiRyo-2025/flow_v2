@@ -13,6 +13,7 @@ class DisplayWindow {
     constructor() {
         this.displayTarget = window.DISPLAY_TARGET;
         this.canvas = document.getElementById('display-canvas');
+        this.svgLayer = document.getElementById('svg-layer');
         this.currentGroupId = null;
         this.elements = [];
         this.selectedElement = null;
@@ -33,6 +34,9 @@ class DisplayWindow {
         
         // 図形描画モード
         this.shapeDrawer = null;
+        
+        // プレビュー図形レイヤー
+        this.previewShapeId = 'preview-shape';
         
         this.init();
     }
@@ -75,6 +79,29 @@ class DisplayWindow {
                     panel.style.display = 'none';
                     evt.target.textContent = '情報パネルを表示';
                 }
+            });
+        }
+        
+        // 投影図形を DB に保存ボタン
+        const saveProjectedBtn = document.getElementById('save-projected-shape');
+        if (saveProjectedBtn) {
+            saveProjectedBtn.addEventListener('click', async () => {
+                console.log('[Display] 保存ボタンクリック');
+                await this.saveProjectedShapeToDB();
+            });
+        }
+        
+        // 投影図形をクリアボタン
+        const clearProjectedBtn = document.getElementById('clear-projected-shape');
+        if (clearProjectedBtn) {
+            clearProjectedBtn.addEventListener('click', () => {
+                console.log('[Display] クリアボタンクリック');
+                const svgLayer = document.getElementById('svg-layer');
+                if (svgLayer) {
+                    svgLayer.innerHTML = '';
+                }
+                localStorage.removeItem('projectionData');
+                alert('✅ 投影図形をクリアしました');
             });
         }
     }
@@ -140,7 +167,27 @@ class DisplayWindow {
             this.highlightSelectedElement();
         } else if (event.key === MAPPING_SYNC_KEY) {
             this.fetchElements(true);
-        } else if (event.key === 'flowExecutionGroup' || event.key === 'previewElement' || event.key === 'flowExecuting') {
+        } else if (event.key === 'previewElement') {
+            // プレビュー図形の描画
+            try {
+                const previewData = JSON.parse(event.newValue);
+                console.log('[Display] プレビュー図形を受け取り:', previewData);
+                this.renderPreviewShape(previewData);
+            } catch (e) {
+                console.warn('[Display] プレビューデータのパースエラー:', e);
+            }
+        } else if (event.key === 'projectionData') {
+            // 表示先への図形投影指令を受け取り
+            try {
+                const projData = JSON.parse(event.newValue);
+                if (projData.action === 'projectShape' && projData.displayTarget === this.displayTarget) {
+                    console.log('[Display] 図形投影指令を受け取り:', projData);
+                    this.displayProjectedShape(projData);
+                }
+            } catch (e) {
+                console.warn('[Display] 投影データのパースエラー:', e);
+            }
+        } else if (event.key === 'flowExecutionGroup' || event.key === 'flowExecuting') {
             this.fetchElements(true);
         }
     }
@@ -456,8 +503,55 @@ class DisplayWindow {
         if (this.pollTimer) {
             clearInterval(this.pollTimer);
         }
+        
+        let lastProjectionDataTimestamp = 0;
+        let projectionCheckCount = 0;  // デバッグ用カウンター
+        
         this.pollTimer = setInterval(() => {
             this.fetchElements();
+            
+            // ============ 投影データのポーリング ============
+            // localStorage の storage event が信頼できないので、直接ポーリングする
+            try {
+                const projectionDataStr = localStorage.getItem('projectionData');
+                projectionCheckCount++;
+                
+                if (projectionDataStr) {
+                    const projData = JSON.parse(projectionDataStr);
+                    
+                    // console.log で定期的に状態を表示（デバッグ用）
+                    if (projectionCheckCount % 10 === 0) {  // 5秒ごと
+                        console.log('[Polling] 投影データの状態:', {
+                            displayTarget: this.displayTarget,
+                            projDataDisplayTarget: projData.displayTarget,
+                            match: this.displayTarget === projData.displayTarget,
+                            timestamp: projData.timestamp,
+                            lastTimestamp: lastProjectionDataTimestamp,
+                            isNew: projData.timestamp > lastProjectionDataTimestamp
+                        });
+                    }
+                    
+                    // 新しいタイムスタンプの場合のみ処理（重複実行を防ぐ）
+                    if (projData.timestamp && projData.timestamp > lastProjectionDataTimestamp) {
+                        lastProjectionDataTimestamp = projData.timestamp;
+                        
+                        console.log('[Polling] 投影データが新しい:', projData);
+                        
+                        if (projData.action === 'projectShape' && projData.displayTarget === this.displayTarget) {
+                            console.log('[Polling] ✅ 投影対象が一致！図形を描画します:', projData);
+                            this.displayProjectedShape(projData);
+                        } else {
+                            console.log('[Polling] ⚠ 投影対象が一致しません:', {
+                                action: projData.action,
+                                displayTarget: projData.displayTarget,
+                                thisDisplayTarget: this.displayTarget
+                            });
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('[Polling] エラー:', e);
+            }
         }, 500);
     }
 
@@ -625,14 +719,12 @@ class DisplayWindow {
         const storedSelectedId = parseInt(localStorage.getItem(SELECTED_ELEMENT_KEY), 10);
         this.selectedElementId = Number.isNaN(storedSelectedId) ? null : storedSelectedId;
 
-        // 既存の要素をクリア
-        this.canvas.innerHTML = '';
+        // 既存の画像要素だけをクリア（SVGレイヤーは残す）
+        const existingImages = this.canvas.querySelectorAll('img');
+        existingImages.forEach(img => img.remove());
         
-        // SVGレイヤーも再作成
-        const svgLayer = document.getElementById('svg-layer');
-        if (svgLayer) {
-            svgLayer.innerHTML = '';
-        }
+        // SVGレイヤーはそのまま保持（innerHTML のクリアもしない）
+        // 理由：displayProjectedShape() で使用するため
         
         this.selectedElement = null;
 
@@ -1050,6 +1142,504 @@ class DisplayWindow {
             console.warn('[Display] Failed to fetch flow execution signal:', error);
             return null;
         }
+    }
+
+    /**
+     * 投影図形を表示（プロジェクター投影、頂点編集可能）
+     */
+    displayProjectedShape(projData) {
+        console.log('[Display] displayProjectedShape() 呼び出し', projData);
+        
+        const svgLayer = document.getElementById('svg-layer');
+        console.log('[Display] SVG レイヤー検索:', { found: !!svgLayer, element: svgLayer });
+        
+        if (!svgLayer) {
+            console.error('[Display] 🔴 SVG レイヤーが見つかりません！');
+            return;
+        }
+
+        // 既存の図形をクリア
+        console.log('[Display] 既存図形をクリア:', { childCount: svgLayer.children.length });
+        svgLayer.innerHTML = '';
+
+        const shapeType = projData.type;
+        const shapeData = projData.shape_data;
+        const strokeColor = projData.stroke_color || '#000000';
+        const fillColor = projData.fill_color || '#FFFFFF';
+        const strokeWidth = projData.stroke_width || 2;
+
+        console.log(`[Display] 投影図形を描画: type=${shapeType}`, { shapeData, colors: { stroke: strokeColor, fill: fillColor, width: strokeWidth } });
+
+        // グループを作成
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('id', 'projected-shape-group');
+        group.setAttribute('class', 'projected-shape');
+
+        try {
+            if (shapeType === 'rectangle' && shapeData.rect) {
+                const rect = shapeData.rect;
+                console.log('[Display] 矩形を描画:', rect);
+                
+                const rectElement = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rectElement.setAttribute('x', rect.x);
+                rectElement.setAttribute('y', rect.y);
+                rectElement.setAttribute('width', rect.width);
+                rectElement.setAttribute('height', rect.height);
+                rectElement.setAttribute('fill', fillColor);
+                rectElement.setAttribute('stroke', strokeColor);
+                rectElement.setAttribute('stroke-width', strokeWidth);
+                rectElement.setAttribute('class', 'editable-shape');
+                rectElement.setAttribute('data-shape-type', 'rectangle');
+                rectElement.setAttribute('data-shape-data', JSON.stringify(shapeData));
+
+                group.appendChild(rectElement);
+                console.log('[Display] 矩形要素を group に追加');
+
+                // 頂点表示（矩形の4つのコーナー）
+                const corners = [
+                    { x: rect.x, y: rect.y, name: 'tl' },
+                    { x: rect.x + rect.width, y: rect.y, name: 'tr' },
+                    { x: rect.x + rect.width, y: rect.y + rect.height, name: 'br' },
+                    { x: rect.x, y: rect.y + rect.height, name: 'bl' }
+                ];
+
+                corners.forEach((corner, idx) => {
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', corner.x);
+                    circle.setAttribute('cy', corner.y);
+                    circle.setAttribute('r', 6);
+                    circle.setAttribute('fill', '#FF6B6B');
+                    circle.setAttribute('stroke', strokeColor);
+                    circle.setAttribute('stroke-width', 2);
+                    circle.setAttribute('class', 'vertex editable-vertex');
+                    circle.setAttribute('data-vertex-idx', idx);
+                    circle.setAttribute('style', 'cursor: move;');
+
+                    group.appendChild(circle);
+                });
+
+                console.log('[Display] 矩形と頂点を描画完了');
+
+            } else if (shapeType === 'polygon' && shapeData.points) {
+                const points = shapeData.points;
+                console.log('[Display] 多角形を描画:', points);
+                
+                const pointsStr = points.map(p => `${p[0]},${p[1]}`).join(' ');
+
+                const polyElement = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                polyElement.setAttribute('points', pointsStr);
+                polyElement.setAttribute('fill', fillColor);
+                polyElement.setAttribute('stroke', strokeColor);
+                polyElement.setAttribute('stroke-width', strokeWidth);
+                polyElement.setAttribute('class', 'editable-shape');
+                polyElement.setAttribute('data-shape-type', 'polygon');
+                polyElement.setAttribute('data-shape-data', JSON.stringify(shapeData));
+
+                group.appendChild(polyElement);
+                console.log('[Display] 多角形要素を group に追加');
+
+                // 各頂点を表示
+                points.forEach((point, idx) => {
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', point[0]);
+                    circle.setAttribute('cy', point[1]);
+                    circle.setAttribute('r', 6);
+                    circle.setAttribute('fill', '#FF6B6B');
+                    circle.setAttribute('stroke', strokeColor);
+                    circle.setAttribute('stroke-width', 2);
+                    circle.setAttribute('class', 'vertex editable-vertex');
+                    circle.setAttribute('data-vertex-idx', idx);
+                    circle.setAttribute('style', 'cursor: move;');
+
+                    group.appendChild(circle);
+                });
+
+                console.log('[Display] 多角形と頂点を描画完了');
+            } else {
+                console.warn('[Display] ⚠ 対応していない図形タイプ:', shapeType, shapeData);
+            }
+
+            svgLayer.appendChild(group);
+            console.log('[Display] group を SVG レイヤーに追加', { childCount: svgLayer.children.length });
+
+            // 頂点編集機能を有効化
+            if (projData.enableVertexEdit) {
+                console.log('[Display] 頂点編集を有効化');
+                this.enableVertexEditing();
+            }
+
+            console.log('[Display] ✅ 投影図形の表示完了！');
+
+        } catch (error) {
+            console.error('[Display] 🔴 投影図形描画エラー:', error);
+        }
+    }
+
+    /**
+     * 頂点編集機能の有効化
+     */
+    /**
+     * 編集されたshape_dataをDBに保存
+     */
+    async saveProjectedShapeToDB() {
+        try {
+            const projectionDataStr = localStorage.getItem('projectionData');
+            if (!projectionDataStr) {
+                alert('❌ 投影データがありません');
+                return;
+            }
+            
+            const projectionData = JSON.parse(projectionDataStr);
+            const shapeData = projectionData.shape_data;
+            
+            console.log('[Display] DB に保存中:', shapeData);
+            
+            // API呼び出し（グループがあれば新規要素として登録）
+            // まずは既存グループを取得
+            const currentGroupId = localStorage.getItem('currentGroupId');
+            if (!currentGroupId) {
+                alert('❌ グループが選択されていません。register_figure.html でグループを選択してください。');
+                return;
+            }
+            
+            const saveData = {
+                group_id: parseInt(currentGroupId),
+                element_type: projectionData.type,
+                display_target: this.displayTarget,
+                shape_data: JSON.stringify(shapeData),
+                shape_type: shapeData.type,
+                stroke_color: projectionData.stroke_color,
+                fill_color: projectionData.fill_color,
+                stroke_width: projectionData.stroke_width,
+                x_position: shapeData.rect?.x || shapeData.points?.[0]?.[0] || 0,
+                y_position: shapeData.rect?.y || shapeData.points?.[0]?.[1] || 0,
+                element_comment: `${this.displayTarget} で投影編集`
+            };
+            
+            console.log('[Display] 保存データ:', saveData);
+            
+            const response = await fetch('/mapping/api/group_elements', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(saveData)
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Unknown error');
+            }
+            
+            const result = await response.json();
+            console.log('[Display] ✅ DB保存成功:', result);
+            alert(`✅ DB に保存しました！\n\nグループ ${currentGroupId} に要素を登録しました。`)
+            
+        } catch (error) {
+            console.error('[Display] ❌ DB保存エラー:', error);
+            alert(`❌ エラー: ${error.message}`);
+        }
+    }
+
+    /**
+     * 頂点・図形ドラッグ編集の有効化
+     */
+    enableVertexEditing() {
+        const svgLayer = document.getElementById('svg-layer');
+        const projectedGroup = document.getElementById('projected-shape-group');
+        
+        if (!svgLayer || !projectedGroup) {
+            console.warn('[Display] SVG レイヤーまたはグループが見つかりません');
+            return;
+        }
+        
+        let draggedVertex = null;
+        let draggedShape = null;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let originalShape = null;
+        
+        const vertices = document.querySelectorAll('.editable-vertex');
+        const editableShape = projectedGroup.querySelector('.editable-shape');
+        
+        // ============ 頂点ドラッグ ============
+        vertices.forEach(vertex => {
+            vertex.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+                draggedVertex = vertex;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                console.log('[Display] 頂点ドラッグ開始:', vertex.getAttribute('data-vertex-idx'));
+            });
+        });
+        
+        // ============ 図形全体ドラッグ ============
+        if (editableShape) {
+            editableShape.addEventListener('mousedown', (e) => {
+                // 頂点をクリックした場合はスキップ
+                if (e.target.classList.contains('editable-vertex')) {
+                    return;
+                }
+                
+                e.stopPropagation();
+                draggedShape = editableShape;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                
+                // 図形の初期状態を保存
+                const shapeType = draggedShape.getAttribute('data-shape-type');
+                if (shapeType === 'rectangle') {
+                    originalShape = {
+                        x: parseFloat(draggedShape.getAttribute('x')),
+                        y: parseFloat(draggedShape.getAttribute('y')),
+                        width: parseFloat(draggedShape.getAttribute('width')),
+                        height: parseFloat(draggedShape.getAttribute('height'))
+                    };
+                } else if (shapeType === 'polygon') {
+                    originalShape = {
+                        points: draggedShape.getAttribute('points')
+                    };
+                }
+                console.log('[Display] 図形ドラッグ開始');
+            });
+        }
+        
+        // ============ マウス移動処理 ============
+        document.addEventListener('mousemove', (e) => {
+            const svgRect = svgLayer.getBoundingClientRect();
+            const x = e.clientX - svgRect.left;
+            const y = e.clientY - svgRect.top;
+            
+            // 頂点ドラッグ中
+            if (draggedVertex) {
+                draggedVertex.setAttribute('cx', x);
+                draggedVertex.setAttribute('cy', y);
+                console.log(`[Display] 頂点移動: (${Math.round(x)}, ${Math.round(y)})`);
+                return;
+            }
+            
+            // 図形ドラッグ中
+            if (draggedShape) {
+                const offsetX = x - dragStartX;
+                const offsetY = y - dragStartY;
+                const shapeType = draggedShape.getAttribute('data-shape-type');
+                
+                if (shapeType === 'rectangle') {
+                    const newX = originalShape.x + offsetX;
+                    const newY = originalShape.y + offsetY;
+                    draggedShape.setAttribute('x', newX);
+                    draggedShape.setAttribute('y', newY);
+                    
+                    // 頂点も移動
+                    projectedGroup.querySelectorAll('.editable-vertex').forEach((v, idx) => {
+                        const corners = [
+                            { x: newX, y: newY },
+                            { x: newX + originalShape.width, y: newY },
+                            { x: newX + originalShape.width, y: newY + originalShape.height },
+                            { x: newX, y: newY + originalShape.height }
+                        ];
+                        if (corners[idx]) {
+                            v.setAttribute('cx', corners[idx].x);
+                            v.setAttribute('cy', corners[idx].y);
+                        }
+                    });
+                } else if (shapeType === 'polygon' && originalShape.points) {
+                    // 多角形の点をパース
+                    const originalPoints = originalShape.points.split(' ').map(p => {
+                        const [px, py] = p.split(',').map(v => parseFloat(v));
+                        return { x: px, y: py };
+                    });
+                    
+                    // 点を移動
+                    const newPoints = originalPoints.map(p => 
+                        `${p.x + offsetX},${p.y + offsetY}`
+                    ).join(' ');
+                    draggedShape.setAttribute('points', newPoints);
+                    
+                    // 頂点圏も移動
+                    projectedGroup.querySelectorAll('.editable-vertex').forEach((v, idx) => {
+                        if (originalPoints[idx]) {
+                            v.setAttribute('cx', originalPoints[idx].x + offsetX);
+                            v.setAttribute('cy', originalPoints[idx].y + offsetY);
+                        }
+                    });
+                }
+                
+                console.log(`[Display] 図形移動: (${Math.round(offsetX)}, ${Math.round(offsetY)})`);
+                return;
+            }
+        });
+        
+        // ============ マウスアップ処理 ============
+        document.addEventListener('mouseup', () => {
+            if (draggedVertex) {
+                console.log('[Display] 頂点ドラッグ完了');
+                // shape_data を更新して localStorage に保存
+                this.saveProjectedShapeToStorage();
+                draggedVertex = null;
+            }
+            
+            if (draggedShape) {
+                console.log('[Display] 図形ドラッグ完了');
+                // shape_data を更新して localStorage に保存
+                this.saveProjectedShapeToStorage();
+                draggedShape = null;
+                originalShape = null;
+            }
+        });
+    }
+    
+    /**
+     * 編集された図形データを更新して localStorage に保存
+     */
+    saveProjectedShapeToStorage() {
+        const editableShape = document.querySelector('.editable-shape');
+        if (!editableShape) return;
+        
+        try {
+            const shapeType = editableShape.getAttribute('data-shape-type');
+            const projectedGroup = document.getElementById('projected-shape-group');
+            const vertices = projectedGroup.querySelectorAll('.editable-vertex');
+            
+            let updatedShapeData = {};
+            
+            if (shapeType === 'rectangle') {
+                const x = parseFloat(editableShape.getAttribute('x'));
+                const y = parseFloat(editableShape.getAttribute('y'));
+                const width = parseFloat(editableShape.getAttribute('width'));
+                const height = parseFloat(editableShape.getAttribute('height'));
+                
+                updatedShapeData = {
+                    type: 'rectangle',
+                    rect: { x, y, width, height }
+                };
+            } else if (shapeType === 'polygon') {
+                const points = [];
+                vertices.forEach(v => {
+                    const cx = parseFloat(v.getAttribute('cx'));
+                    const cy = parseFloat(v.getAttribute('cy'));
+                    points.push([cx, cy]);
+                });
+                
+                updatedShapeData = {
+                    type: 'polygon',
+                    points: points
+                };
+            }
+            
+            // localStorage の projectionData を更新
+            const projectionDataStr = localStorage.getItem('projectionData');
+            if (projectionDataStr) {
+                const projectionData = JSON.parse(projectionDataStr);
+                projectionData.shape_data = updatedShapeData;
+                projectionData.timestamp = Date.now();
+                localStorage.setItem('projectionData', JSON.stringify(projectionData));
+                console.log('[Display] ✅ shape_data を更新:', updatedShapeData);
+            }
+        } catch (error) {
+            console.error('[Display] shape_data 保存エラー:', error);
+        }
+    }
+
+    /**
+     * プレビュー図形を描画（localStorage同期用）
+     */
+    renderPreviewShape(previewData) {
+        console.log('[Display] renderPreviewShape 実行:', previewData);
+        console.log('[Display] this.displayTarget =', this.displayTarget);
+        console.log('[Display] previewData.displayTarget =', previewData.displayTarget);
+        
+        // displayTarget をチェック：自分のウィンドウの場合のみ表示
+        if (previewData.displayTarget && previewData.displayTarget !== this.displayTarget) {
+            console.log(`[Display] 違うウィンドウへの表示指示 (${previewData.displayTarget})。スキップします。`);
+            // 既存のプレビューを削除
+            const existingPreview = this.svgLayer?.querySelector(`#${this.previewShapeId}`);
+            if (existingPreview) {
+                existingPreview.remove();
+            }
+            return;
+        }
+        
+        console.log('[Display] 自分のウィンドウ (${this.displayTarget}) への表示です。続行します。');
+        console.log('[Display] this.svgLayer =', this.svgLayer);
+        console.log('[Display] this.svgLayer?.id =', this.svgLayer?.id);
+        
+        if (!this.svgLayer) {
+            console.warn('[Display] ERROR: SVG layer not found! this.svgLayer is', this.svgLayer);
+            const manualSvg = document.getElementById('svg-layer');
+            console.warn('[Display] Manual getElementById("svg-layer") result:', manualSvg);
+            return;
+        }
+
+        // 既存のプレビュー図形を削除
+        const existingPreview = this.svgLayer.querySelector(`#${this.previewShapeId}`);
+        if (existingPreview) {
+            console.log('[Display] 既存プレビューを削除');
+            existingPreview.remove();
+        }
+
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('id', this.previewShapeId);
+
+        const type = previewData.type;
+        const strokeColor = previewData.strokeColor || '#000000';
+        const fillColor = previewData.fillColor || '#FFFFFF';
+        const strokeWidth = previewData.strokeWidth || 2;
+
+        console.log('[Display] type =', type, ', strokeColor =', strokeColor, ', fillColor =', fillColor);
+
+        if (type === 'rectangle') {
+            const x = previewData.x || 50;
+            const y = previewData.y || 50;
+            const width = previewData.width || 200;
+            const height = previewData.height || 150;
+
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', x);
+            rect.setAttribute('y', y);
+            rect.setAttribute('width', width);
+            rect.setAttribute('height', height);
+            rect.setAttribute('stroke', strokeColor);
+            rect.setAttribute('stroke-width', strokeWidth);
+            rect.setAttribute('fill', fillColor);
+            rect.setAttribute('opacity', '0.7');
+
+            group.appendChild(rect);
+            console.log('[Display] 矩形プレビュー作成:', {x, y, width, height});
+
+        } else if (type === 'polygon') {
+            if (!previewData.points || previewData.points.length < 3) {
+                console.warn('[Display] 多角形は3つ以上の頂点が必要です');
+                return;
+            }
+
+            const pointsStr = previewData.points.map(p => `${p[0]},${p[1]}`).join(' ');
+
+            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            polygon.setAttribute('points', pointsStr);
+            polygon.setAttribute('stroke', strokeColor);
+            polygon.setAttribute('stroke-width', strokeWidth);
+            polygon.setAttribute('fill', fillColor);
+            polygon.setAttribute('opacity', '0.7');
+
+            group.appendChild(polygon);
+
+            // 頂点を表示
+            previewData.points.forEach((point, index) => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', point[0]);
+                circle.setAttribute('cy', point[1]);
+                circle.setAttribute('r', '4');
+                circle.setAttribute('fill', strokeColor);
+                circle.setAttribute('opacity', '0.8');
+
+                group.appendChild(circle);
+            });
+
+            console.log('[Display] 多角形プレビュー作成:', previewData.points.length + '個の頂点');
+        }
+
+        console.log('[Display] group をsvgLayerに追加します。svgLayer.children.length =', this.svgLayer.children.length);
+        this.svgLayer.appendChild(group);
+        console.log('[Display] 追加完了。svgLayer.children.length =', this.svgLayer.children.length);
     }
 
     /**

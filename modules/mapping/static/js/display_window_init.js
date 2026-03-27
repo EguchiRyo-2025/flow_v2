@@ -1,4 +1,7 @@
-window.DISPLAY_TARGET = "{{ display_target }}";
+// Ensure DISPLAY_TARGET is already set by including template
+if (!window.DISPLAY_TARGET) {
+    window.DISPLAY_TARGET = 'monitor';
+}
 
 // ウィンドウサイズを表示
 function updateWindowSize() {
@@ -31,7 +34,7 @@ window.addEventListener('resize', updateWindowSize);
         }, 100);
     }
     
-    const displayTarget = "{{ display_target }}";
+    const displayTarget = window.DISPLAY_TARGET;
     
     // display_targetに応じてウィンドウを配置
     if (displayTarget === 'parts' || displayTarget === 'workbench') {
